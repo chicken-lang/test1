@@ -2,7 +2,7 @@
 <template>
   <div class="smart-cart">
     <h1>🛒 Vue 3 智能购物车系统</h1>
-    <h2>陆添荣2507040131</h2>
+    <h2>深圳信息技术职业大学</h2>
     <!-- 搜索和筛选区域 -->
     <div class="filter-section">
       <input 
