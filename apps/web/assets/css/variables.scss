@@ -1,0 +1,99 @@
+// SCSS 变量与 Mixin - 教务处网站设计系统
+// 主题色参考实施计划 T2.1: #005BAC
+
+// ========== 主题色 ==========
+$primary: #005bac;
+$primary-light: #3378c0;
+$primary-dark: #004a8c;
+$primary-bg: #f0f6fc;
+
+// 功能色
+$success: #52c41a;
+$warning: #faad14;
+$danger: #f5222d;
+$info: #909399;
+
+// ========== 文字色 ==========
+$text-primary: #303133;
+$text-regular: #606266;
+$text-secondary: #909399;
+$text-placeholder: #c0c4cc;
+$text-inverse: #ffffff;
+
+// ========== 背景色 ==========
+$bg-page: #f5f7fa;
+$bg-card: #ffffff;
+$bg-hover: #f5f7fa;
+
+// ========== 边框 ==========
+$border-base: #dcdfe6;
+$border-light: #e4e7ed;
+$border-lighter: #ebeef5;
+$radius-base: 4px;
+$radius-lg: 8px;
+
+// ========== 断点(对应 T3.6: 5 档) ==========
+$bp-xs: 375px; // 手机
+$bp-sm: 768px; // 平板
+$bp-md: 1024px; // 小屏笔记本
+$bp-lg: 1280px; // 桌面
+$bp-xl: 1920px; // 大屏
+
+// ========== 布局 ==========
+$header-height: 120px;
+$nav-height: 48px;
+$footer-height: 240px;
+$content-width: 1200px;
+
+// ========== Mixin ==========
+@mixin clearfix {
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+}
+
+// 响应式断点
+@mixin respond-to($bp) {
+  @if $bp == xs {
+    @media (max-width: $bp-sm - 1px) {
+      @content;
+    }
+  } @else if $bp == sm {
+    @media (min-width: $bp-sm) and (max-width: $bp-md - 1px) {
+      @content;
+    }
+  } @else if $bp == md {
+    @media (min-width: $bp-md) and (max-width: $bp-lg - 1px) {
+      @content;
+    }
+  } @else if $bp == lg {
+    @media (min-width: $bp-lg) {
+      @content;
+    }
+  }
+}
+
+// 内容容器(居中限宽)
+@mixin container {
+  width: 100%;
+  max-width: $content-width;
+  margin: 0 auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+// 文字省略
+@mixin text-ellipsis($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

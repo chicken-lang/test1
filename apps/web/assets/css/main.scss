@@ -1,0 +1,125 @@
+// 全局样式 - 教务处用户端
+@use './variables.scss' as *;
+
+// ========== Reset ==========
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: $text-primary;
+  background-color: $bg-page;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: $text-regular;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: $primary;
+  }
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// ========== 通用工具类 ==========
+.container {
+  @include container;
+}
+
+.text-primary {
+  color: $primary;
+}
+
+.text-danger {
+  color: $danger;
+}
+
+.text-ellipsis {
+  @include text-ellipsis(1);
+}
+
+.text-ellipsis-2 {
+  @include text-ellipsis(2);
+}
+
+// ========== 适老化模式(字号放大 + 高对比度) ==========
+:root[data-color-mode='elderly'] {
+  font-size: 18px;
+
+  body {
+    line-height: 1.8;
+  }
+
+  $primary: #003d73; // 加深主色提升对比度
+  $text-primary: #000000;
+  $text-regular: #333333;
+}
+
+// ========== 页面过渡 ==========
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s;
+}
+
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}
+
+// ========== 滚动条美化 ==========
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $bg-page;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $border-base;
+  border-radius: 4px;
+
+  &:hover {
+    background: $text-secondary;
+  }
+}
+
+// ========== skip-to-content 无障碍快捷链接 ==========
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: $primary;
+  color: #fff;
+  padding: 8px 16px;
+  z-index: 9999;
+  border-radius: 0 0 $radius-base 0;
+
+  &:focus {
+    top: 0;
+    color: #fff;
+  }
+}
