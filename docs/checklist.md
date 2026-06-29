@@ -194,7 +194,7 @@
 
 ### T3.6 响应式 + 适老化 + 无障碍基础
 - [x] 响应式断点 mixin(xs/sm/md/lg/xl)
-- [x] 适老化模式切换(elderly)
+- [-] 适老化模式切换(elderly) — 用户指示无需考虑适老化(v2.0 已移除)
 - [x] skip-link 无障碍
 - [ ] ARIA 标签完善
 - [ ] 键盘导航测试
@@ -222,6 +222,29 @@
   - [x] SEO 元信息已设置
 
 > 完成时间:2026-06-29
+
+#### T4.1-UI 首页视觉系统 v2.0 商业级重构 ✅
+- 设计令牌层
+  - [x] `assets/css/variables.scss` v2.0: 金色辅助色 / 分层阴影(xs~xl) / 品牌渐变 / 中英文字体(衬线+无衬线) / 字号模数 1.25 / 8px 间距系统
+  - [x] `assets/css/main.scss`: 移除适老化样式,新增通用 `.section-header`(中英文对照标题)
+- 布局组件重构
+  - [x] `AppHeader.vue`: SVG 盾形校徽 + 中英文校名 + 金色顶部装饰线(shimmer)
+  - [x] `AppNav.vue`: 深色导航 + 金色底部指示器 scaleX 动画 + 移动端抽屉
+  - [x] `AppFooter.vue`: 品牌区 + 4 列链接 + 二维码 + 版权底栏
+- 首页区块重构
+  - [x] `HomeBanner.vue`: 沉浸式全宽轮播 + 左侧渐变遮罩 + 玻璃态按钮 + 自定义指示器联动(@change)
+  - [x] `HomeNotice.vue`: 自定义 Tab(去 Element Plus Tabs) + 日期块(左侧蓝色边框 hover 变金色) + 中英文标题
+  - [x] `HomeNews.vue`: 杂志式布局(1 大特色 + 3 次要序号衬线字) + 头条金色标签
+  - [x] `HomeQuickLink.vue`: 卡片化设计(去圆形图标) + 顶边金色装饰条 + 类别副标
+  - [x] `HomeSections.vue`: 课程统计(衬线大数字) + 常用信息(图标列表) + 暗色举报卡(金色 CTA) + 信息公开
+- Mock 数据
+  - [x] `Banner` 接口新增 `desc` 字段并填充数据
+- 验证
+  - [x] `pnpm lint` 通过(--max-warnings=0)
+  - [x] SSR 渲染 HTTP 200(http://localhost:3001)
+  - [x] lint-staged 提交钩子全通过(eslint+stylelint+prettier)
+
+> 完成时间:2026-06-30 · 提交:`6b74649`
 
 ### T4.2 列表页通用模板 ✅
 - 执行前
