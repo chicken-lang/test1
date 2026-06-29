@@ -1,0 +1,2 @@
+# commit-msg: 校验提交信息符合 Conventional Commits 规范
+pnpm exec commitlint --edit "$1" --config commitlint.config.cjs

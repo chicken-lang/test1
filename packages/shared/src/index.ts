@@ -7,19 +7,19 @@
 
 // 统一 API 响应格式(对应需求文档第 8.3 节)
 export interface ApiResponse<T = unknown> {
-  code: number;
-  message: string;
-  data: T;
-  trace_id: string;
+  code: number
+  message: string
+  data: T
+  trace_id: string
 }
 
 // 分页响应
 export interface PaginatedData<T> {
-  list: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  list: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 // 文章状态机(对应 T2.5 工作流)
@@ -46,6 +46,6 @@ export const ErrorCode = {
   // 5xx 服务端错误
   INTERNAL_ERROR: 50000,
   SERVICE_UNAVAILABLE: 50300,
-} as const;
+} as const
 
-export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];
+export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode]

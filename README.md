@@ -4,12 +4,12 @@
 
 ## 技术栈
 
-| 模块 | 技术 | 位置 |
-|---|---|---|
-| 用户端 | Nuxt 3 (SSR/SSG) + Vue 3 + TS | `apps/web` |
-| CMS 后台 | Vue 3 + Element Plus + TS | `apps/admin` |
-| 后端 | NestJS 10 + Fastify + Prisma | `apps/server` |
-| 共享包 | TypeScript 类型与工具 | `packages/shared` |
+| 模块     | 技术                          | 位置              |
+| -------- | ----------------------------- | ----------------- |
+| 用户端   | Nuxt 3 (SSR/SSG) + Vue 3 + TS | `apps/web`        |
+| CMS 后台 | Vue 3 + Element Plus + TS     | `apps/admin`      |
+| 后端     | NestJS 10 + Fastify + Prisma  | `apps/server`     |
+| 共享包   | TypeScript 类型与工具         | `packages/shared` |
 
 ## 环境要求
 
@@ -37,15 +37,15 @@ pnpm dev:server   # 后端 API
 
 ## 常用脚本
 
-| 命令 | 说明 |
-|---|---|
-| `pnpm build` | 构建所有子包 |
-| `pnpm lint` | 全量 lint |
-| `pnpm lint:fix` | 自动修复 lint 问题 |
-| `pnpm format` | Prettier 格式化 |
-| `pnpm test` | 运行所有测试 |
-| `pnpm typecheck` | 全量类型检查 |
-| `pnpm clean` | 清理构建产物与缓存 |
+| 命令             | 说明               |
+| ---------------- | ------------------ |
+| `pnpm build`     | 构建所有子包       |
+| `pnpm lint`      | 全量 lint          |
+| `pnpm lint:fix`  | 自动修复 lint 问题 |
+| `pnpm format`    | Prettier 格式化    |
+| `pnpm test`      | 运行所有测试       |
+| `pnpm typecheck` | 全量类型检查       |
+| `pnpm clean`     | 清理构建产物与缓存 |
 
 ## 目录结构
 

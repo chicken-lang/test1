@@ -1,5 +1,5 @@
 # pnpm workspace 配置
 # 多包结构: apps/web(用户端 Nuxt) / apps/admin(CMS) / apps/server(NestJS) / packages/shared(共享)
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
