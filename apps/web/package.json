@@ -1,0 +1,17 @@
+{
+  "name": "@jwc/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "教务处网站 - 用户端(Nuxt 3 SSR/SSG)",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"[web] Nuxt 3 骨架将在 T3.1 搭建,当前为 Monorepo 占位\"",
+    "build": "echo \"[web] Nuxt 3 骨架将在 T3.1 搭建\"",
+    "lint": "echo \"[web] lint 待 T3.1 配置\"",
+    "typecheck": "echo \"[web] typecheck 待 T3.1 配置\"",
+    "test": "echo \"[web] test 待 T3.1 配置\""
+  },
+  "dependencies": {
+    "@jwc/shared": "workspace:*"
+  }
+}

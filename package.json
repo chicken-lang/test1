@@ -1,0 +1,32 @@
+{
+  "name": "jwc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "深圳信息职业技术大学教务处网站重构 - Monorepo 根包",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:web": "pnpm --filter @jwc/web dev",
+    "dev:admin": "pnpm --filter @jwc/admin dev",
+    "dev:server": "pnpm --filter @jwc/server dev",
+    "build": "pnpm -r run build",
+    "build:shared": "pnpm --filter @jwc/shared build",
+    "build:web": "pnpm --filter @jwc/web build",
+    "build:admin": "pnpm --filter @jwc/admin build",
+    "build:server": "pnpm --filter @jwc/server build",
+    "lint": "pnpm -r run lint",
+    "lint:fix": "pnpm -r run lint:fix",
+    "format": "prettier --write \"**/*.{ts,tsx,vue,js,json,md,yml,yaml}\"",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r exec rimraf dist build .nuxt .output coverage node_modules/.cache"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "rimraf": "^6.0.1"
+  },
+  "packageManager": "pnpm@11.9.0"
+}

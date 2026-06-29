@@ -1,0 +1,17 @@
+{
+  "name": "@jwc/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "教务处网站 - 后端 API(NestJS 10 + Fastify + Prisma)",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"[server] NestJS 骨架将在 T1.1 搭建,当前为 Monorepo 占位\"",
+    "build": "echo \"[server] NestJS 骨架将在 T1.1 搭建\"",
+    "lint": "echo \"[server] lint 待 T1.1 配置\"",
+    "typecheck": "echo \"[server] typecheck 待 T1.1 配置\"",
+    "test": "echo \"[server] test 待 T1.1 配置\""
+  },
+  "dependencies": {
+    "@jwc/shared": "workspace:*"
+  }
+}
