@@ -34,23 +34,23 @@
 const route = useRoute()
 const mobileOpen = ref(false)
 
-// 16 个一级栏目
+// 16 个一级栏目(内容栏目指向通用列表页 /list/[slug])
 const navItems = [
   { title: '首页', path: '/' },
   { title: '部门介绍', path: '/about' },
-  { title: '规章制度', path: '/regulations' },
-  { title: '通知公告', path: '/notices' },
-  { title: '教务管理', path: '/academic' },
-  { title: '实践教学', path: '/practice' },
-  { title: '专业建设', path: '/major' },
-  { title: '教研教改', path: '/research' },
-  { title: '技能竞赛', path: '/competition' },
-  { title: '教学荣誉', path: '/honor' },
-  { title: '智慧教室', path: '/classroom' },
-  { title: '项目指南', path: '/project' },
-  { title: '下载中心', path: '/download' },
-  { title: '教学反馈', path: '/feedback' },
-  { title: '办事指南', path: '/guide' },
+  { title: '规章制度', path: '/list/regulations' },
+  { title: '通知公告', path: '/list/notices' },
+  { title: '教务管理', path: '/list/academic' },
+  { title: '实践教学', path: '/list/practice' },
+  { title: '专业建设', path: '/list/major' },
+  { title: '教研教改', path: '/list/research' },
+  { title: '技能竞赛', path: '/list/competition' },
+  { title: '教学荣誉', path: '/list/honor' },
+  { title: '智慧教室', path: '/list/classroom' },
+  { title: '项目指南', path: '/list/project' },
+  { title: '下载中心', path: '/list/download' },
+  { title: '教学反馈', path: '/list/feedback' },
+  { title: '办事指南', path: '/list/guide' },
   { title: '校历作息', path: '/calendar' },
 ]
 
