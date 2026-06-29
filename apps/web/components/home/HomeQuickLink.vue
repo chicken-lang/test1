@@ -1,10 +1,11 @@
 <template>
   <section class="home-quick">
+    <!-- 区块标题(中英文对照) -->
     <div class="section-header">
-      <h2 class="section-title">
-        <span class="title-bar"></span>
-        快速通道
-      </h2>
+      <div class="section-title-group">
+        <span class="title-cn">快速通道</span>
+        <span class="title-en">Quick Access</span>
+      </div>
     </div>
 
     <div class="quick-grid">
@@ -12,112 +13,166 @@
         v-for="link in quickLinks"
         :key="link.id"
         :href="link.url"
-        class="quick-item"
+        class="quick-card"
         target="_blank"
         rel="noopener noreferrer"
       >
-        <div class="quick-icon">
-          <Icon :icon="link.icon" width="28" height="28" />
+        <!-- 顶部金色装饰条 -->
+        <span class="card-top"></span>
+        <div class="card-body">
+          <div class="card-icon">
+            <Icon :icon="link.icon" width="22" height="22" />
+          </div>
+          <div class="card-text">
+            <span class="card-title">{{ link.title }}</span>
+            <span class="card-category">{{ link.category }}</span>
+          </div>
+          <Icon icon="mdi:arrow-top-right" class="card-arrow" width="14" height="14" />
         </div>
-        <span class="quick-title">{{ link.title }}</span>
       </a>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-// 首页快速通道(FR-01.05: ≥6 入口,对应 FR-17 外部系统)
+// HomeQuickLink v2.0: 卡片化设计(去圆形图标,采用顶边装饰+方形图标+类别副标)
 import { quickLinks } from '~/mock/data'
 </script>
 
 <style lang="scss" scoped>
 .home-quick {
-  margin-bottom: 32px;
-}
-
-.section-header {
-  margin-bottom: 16px;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.title-bar {
-  width: 4px;
-  height: 20px;
-  background: $primary;
-  border-radius: 2px;
+  margin-bottom: $space-10;
 }
 
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 16px;
+  gap: $space-4;
 }
 
-.quick-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 8px;
+.quick-card {
+  position: relative;
+  display: block;
   background: $bg-card;
-  border-radius: $radius-lg;
-  transition: all 0.2s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border-radius: $radius-base;
+  overflow: hidden;
+  box-shadow: $shadow-xs;
+  transition: all $transition-base;
+
+  // 顶部装饰条(默认透明)
+  .card-top {
+    display: block;
+    height: 3px;
+    background: transparent;
+    transition: all $transition-base;
+  }
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 91, 172, 0.12);
+    box-shadow: $shadow-md;
+    transform: translateY(-3px);
 
-    .quick-icon {
-      background: $primary;
-      color: #fff;
+    .card-top {
+      background: $grad-gold;
     }
 
-    .quick-title {
+    .card-icon {
+      background: $grad-primary;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 91, 172, 0.3);
+    }
+
+    .card-title {
       color: $primary;
+    }
+
+    .card-arrow {
+      opacity: 1;
+      transform: translate(0, 0);
+      color: $gold;
     }
   }
 }
 
-.quick-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: $primary-bg;
-  color: $primary;
+.card-body {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-4;
+}
+
+.card-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: $radius-base;
+  background: $primary-bg;
+  color: $primary;
+  transition: all $transition-base;
+
+  :deep(svg) {
+    transition: color $transition-base;
+  }
 }
 
-.quick-title {
-  font-size: 14px;
-  color: $text-regular;
-  text-align: center;
+.card-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-title {
+  font-size: $fs-base;
+  font-weight: $fw-semibold;
+  color: $text-primary;
+  line-height: 1.3;
   @include text-ellipsis(1);
+  transition: color $transition-fast;
 }
 
+.card-category {
+  font-size: $fs-xs;
+  color: $text-placeholder;
+  letter-spacing: 0.5px;
+}
+
+.card-arrow {
+  flex-shrink: 0;
+  color: $text-placeholder;
+  opacity: 0;
+  transform: translate(-4px, 4px);
+  transition: all $transition-base;
+}
+
+// 移动端
 @include respond-to(xs) {
   .quick-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $space-3;
   }
 
-  .quick-icon {
-    width: 44px;
-    height: 44px;
+  .card-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-2;
+    padding: $space-3;
   }
 
-  .quick-title {
-    font-size: 12px;
+  .card-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .card-arrow {
+    display: none;
+  }
+
+  .card-category {
+    display: none;
   }
 }
 </style>

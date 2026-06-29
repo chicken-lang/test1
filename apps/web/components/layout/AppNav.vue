@@ -5,7 +5,7 @@
       <ul class="nav-list">
         <li v-for="item in navItems" :key="item.path" class="nav-item">
           <NuxtLink :to="item.path" class="nav-link" :class="{ active: isActive(item.path) }">
-            {{ item.title }}
+            <span class="nav-text">{{ item.title }}</span>
           </NuxtLink>
         </li>
       </ul>
@@ -28,9 +28,7 @@
 </template>
 
 <script setup lang="ts">
-// AppNav: 主导航 16 项(对应 T3.2 主导航 16 项 + 移动端抽屉)
-// 栏目结构参考实施计划阶段 5 业务内容模块
-
+// AppNav v2.0: 深色导航 + 金色底部指示器 + 悬浮动效
 const route = useRoute()
 const mobileOpen = ref(false)
 
@@ -62,12 +60,12 @@ const isActive = (path: string) => {
 
 <style lang="scss" scoped>
 .app-nav {
-  background: $primary;
+  background: $primary-dark;
   height: $nav-height;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 45, 82, 0.15);
 }
 
 .nav-inner {
@@ -80,30 +78,55 @@ const isActive = (path: string) => {
 .nav-list {
   display: flex;
   align-items: center;
-  gap: 0;
   height: 100%;
 }
 
 .nav-item {
   height: 100%;
+  position: relative;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 0 18px;
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 16px;
-  font-weight: 500;
-  transition: all 0.2s;
-  border-bottom: 3px solid transparent;
+  padding: 0 $space-4;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: $fs-md;
+  font-weight: $fw-medium;
+  transition: all $transition-fast;
+  position: relative;
 
-  &:hover,
-  &.active {
-    background: $primary-dark;
+  // 底部指示器(悬浮/激活时金色线条)
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%) scaleX(0);
+    width: 24px;
+    height: 3px;
+    background: $grad-gold;
+    border-radius: $radius-pill $radius-pill 0 0;
+    transition: transform $transition-base;
+  }
+
+  &:hover {
     color: #fff;
-    border-bottom-color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+
+    &::after {
+      transform: translateX(-50%) scaleX(1);
+    }
+  }
+
+  &.active {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.15);
+
+    &::after {
+      transform: translateX(-50%) scaleX(1);
+    }
   }
 }
 
@@ -113,22 +136,26 @@ const isActive = (path: string) => {
   border: none;
   color: #fff;
   cursor: pointer;
-  padding: 8px;
+  padding: $space-2;
 }
 
 .nav-drawer {
   display: none;
-  background: $primary-dark;
-  padding: 8px 0;
+  background: $primary-darker;
+  padding: $space-2 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 
   li a {
     display: block;
-    padding: 12px 24px;
-    color: #fff;
-    font-size: 15px;
+    padding: $space-3 $space-6;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: $fs-base;
+    transition: all $transition-fast;
 
     &:hover {
-      background: $primary;
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      padding-left: $space-8;
     }
   }
 }

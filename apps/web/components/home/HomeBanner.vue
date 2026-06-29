@@ -1,27 +1,73 @@
 <template>
   <section class="home-banner">
-    <el-carousel height="360px" :interval="5000" arrow="hover" indicator-position="outside">
+    <el-carousel
+      ref="carouselRef"
+      height="440px"
+      :interval="6000"
+      arrow="hover"
+      indicator-position="none"
+      @change="onSlideChange"
+    >
       <el-carousel-item v-for="banner in banners" :key="banner.id">
         <NuxtLink :to="banner.linkUrl" class="banner-item">
           <img :src="banner.imageUrl" :alt="banner.title" class="banner-img" />
-          <div class="banner-overlay">
+          <div class="banner-overlay"></div>
+          <div class="banner-content">
+            <div class="banner-tag">
+              <Icon icon="mdi:star-four-points" width="14" height="14" />
+              <span>教务动态</span>
+            </div>
             <h2 class="banner-title">{{ banner.title }}</h2>
+            <div class="banner-line"></div>
+            <p class="banner-desc">{{ banner.desc }}</p>
+            <span class="banner-btn">
+              查看详情
+              <Icon icon="mdi:arrow-right" width="16" height="16" />
+            </span>
           </div>
         </NuxtLink>
       </el-carousel-item>
     </el-carousel>
+
+    <!-- 自定义指示器(底部进度) -->
+    <div class="banner-indicators">
+      <span
+        v-for="(banner, idx) in banners"
+        :key="banner.id"
+        class="indicator-dot"
+        :class="{ active: idx === activeIndex }"
+        @click="goToSlide(idx)"
+      ></span>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-// 首页 Banner 轮播(FR-01.02,≥3 张,PC+移动)
+// HomeBanner v2.0: 沉浸式全宽轮播 + 精致文字浮层 + 金色装饰
 import { banners } from '~/mock/data'
+import type { CarouselInstance } from 'element-plus'
+
+// 当前激活幻灯片索引(用于自定义指示器联动)
+const activeIndex = ref(0)
+// el-carousel 实例引用
+const carouselRef = ref<CarouselInstance | null>(null)
+
+// el-carousel @change 回调,参数为当前索引
+function onSlideChange(idx: number) {
+  activeIndex.value = idx
+}
+
+// 点击自定义指示器切换幻灯片
+function goToSlide(idx: number) {
+  carouselRef.value?.setActiveItem(idx)
+}
 </script>
 
 <style lang="scss" scoped>
 .home-banner {
+  position: relative;
   width: 100%;
-  margin-bottom: 24px;
+  margin-bottom: $space-8;
 }
 
 .banner-item {
@@ -36,27 +82,158 @@ import { banners } from '~/mock/data'
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 8s ease;
+
+  .banner-item:hover & {
+    transform: scale(1.05);
+  }
 }
 
+// 渐变遮罩(左侧深,右侧透明,文字可读)
 .banner-overlay {
   position: absolute;
-  bottom: 0;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 42, 82, 0.85) 0%,
+    rgba(0, 42, 82, 0.6) 40%,
+    rgba(0, 42, 82, 0.2) 70%,
+    transparent 100%
+  );
+}
+
+// 文字内容(左下)
+.banner-content {
+  position: absolute;
   left: 0;
-  right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
-  padding: 40px 30px 24px;
+  bottom: 0;
+  top: 0;
+  max-width: 560px;
+  padding: $space-12 $space-12;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #fff;
+}
+
+.banner-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 $space-3;
+  background: rgba(184, 149, 106, 0.25);
+  border: 1px solid rgba(212, 184, 138, 0.4);
+  border-radius: $radius-pill;
+  font-size: $fs-xs;
+  letter-spacing: 2px;
+  color: $gold-light;
+  margin-bottom: $space-4;
+  align-self: flex-start;
+
+  :deep(svg) {
+    color: $gold-light;
+  }
 }
 
 .banner-title {
-  color: #fff;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: $fs-4xl;
+  font-weight: $fw-bold;
+  line-height: $lh-tight;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  margin-bottom: $space-4;
+}
+
+.banner-line {
+  width: 48px;
+  height: 3px;
+  background: $grad-gold;
+  border-radius: $radius-pill;
+  margin-bottom: $space-4;
+}
+
+.banner-desc {
+  font-size: $fs-md;
+  line-height: $lh-relaxed;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: $space-6;
   @include text-ellipsis(2);
 }
 
+.banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3 $space-6;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: $radius-pill;
+  font-size: $fs-base;
+  color: #fff;
+  backdrop-filter: blur(8px);
+  transition: all $transition-base;
+  align-self: flex-start;
+
+  .banner-item:hover & {
+    background: $grad-gold;
+    border-color: transparent;
+    gap: $space-3;
+  }
+}
+
+// 底部指示器
+.banner-indicators {
+  position: absolute;
+  bottom: $space-6;
+  right: $space-12;
+  display: flex;
+  gap: $space-2;
+  z-index: 2;
+}
+
+.indicator-dot {
+  width: 24px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: $radius-pill;
+  transition: all $transition-base;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  &.active {
+    width: 40px;
+    background: $grad-gold;
+  }
+}
+
+// 移动端
 @include respond-to(xs) {
+  .home-banner {
+    :deep(.el-carousel) {
+      height: 280px !important;
+    }
+  }
+
+  .banner-content {
+    max-width: 100%;
+    padding: $space-6 $space-5;
+  }
+
   .banner-title {
-    font-size: 16px;
+    font-size: $fs-xl;
+  }
+
+  .banner-desc {
+    font-size: $fs-sm;
+    -webkit-line-clamp: 1;
+  }
+
+  .banner-indicators {
+    right: $space-5;
+    bottom: $space-4;
   }
 }
 </style>

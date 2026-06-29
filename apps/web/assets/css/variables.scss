@@ -1,49 +1,137 @@
-// SCSS 变量与 Mixin - 教务处网站设计系统
-// 主题色参考实施计划 T2.1: #005BAC
+// ====================================================================
+// 教务处网站设计系统 v2.0
+// 设计理念: 商业级高端视觉, 参考 szpu 教务处中英文对照风格
+// 色彩: 深信院蓝 + 金色点缀, 营造学术庄重感
+// ====================================================================
 
-// ========== 主题色 ==========
+// ========== 品牌主色(深信院蓝) ==========
 $primary: #005bac;
-$primary-light: #3378c0;
-$primary-dark: #004a8c;
+$primary-light: #2d7dc4;
+$primary-lighter: #5a9fdb;
+$primary-dark: #003d73;
+$primary-darker: #002a52;
 $primary-bg: #f0f6fc;
+$primary-bg-soft: #e6f0fa;
 
-// 功能色
+// ========== 辅助色(金色 - 学术点缀) ==========
+$gold: #b8956a;
+$gold-light: #d4b88a;
+$gold-dark: #9a7a52;
+$gold-bg: #faf6f0;
+
+// ========== 功能色 ==========
 $success: #52c41a;
 $warning: #faad14;
-$danger: #f5222d;
+$danger: #e63946;
+$danger-dark: #c1121f;
 $info: #909399;
 
-// ========== 文字色 ==========
-$text-primary: #303133;
-$text-regular: #606266;
-$text-secondary: #909399;
-$text-placeholder: #c0c4cc;
-$text-inverse: #ffffff;
+// ========== 文字色(分层) ==========
+$text-primary: #1a2332; // 标题(接近黑)
+$text-regular: #3d4754; // 正文
+$text-secondary: #6b7785; // 辅助说明
+$text-placeholder: #a8b1bd; // 占位
+$text-inverse: #ffffff; // 反白
+$text-link: #005bac;
 
-// ========== 背景色 ==========
-$bg-page: #f5f7fa;
+// ========== 背景色(带蓝调,提升质感) ==========
+$bg-page: #f4f7fb; // 页面背景(微蓝灰)
 $bg-card: #ffffff;
-$bg-hover: #f5f7fa;
+$bg-soft: #fafbfd; // 次级背景
+$bg-hover: #f0f4f8;
+$bg-dark: #1a2332; // 深色区块
 
-// ========== 边框 ==========
-$border-base: #dcdfe6;
-$border-light: #e4e7ed;
-$border-lighter: #ebeef5;
-$radius-base: 4px;
-$radius-lg: 8px;
+// ========== 边框(柔和) ==========
+$border-base: #d8dee6;
+$border-light: #e6ebf1;
+$border-lighter: #eef2f7;
 
-// ========== 断点(对应 T3.6: 5 档) ==========
-$bp-xs: 375px; // 手机
-$bp-sm: 768px; // 平板
-$bp-md: 1024px; // 小屏笔记本
-$bp-lg: 1280px; // 桌面
-$bp-xl: 1920px; // 大屏
+// ========== 圆角(统一系统) ==========
+$radius-sm: 4px;
+$radius-base: 6px;
+$radius-lg: 10px;
+$radius-xl: 16px;
+$radius-pill: 999px;
+
+// ========== 阴影(分层系统,营造立体感) ==========
+$shadow-xs: 0 1px 2px rgba(0, 45, 82, 0.04);
+$shadow-sm: 0 2px 8px rgba(0, 45, 82, 0.06);
+$shadow-md: 0 4px 16px rgba(0, 45, 82, 0.08);
+$shadow-lg: 0 8px 32px rgba(0, 45, 82, 0.12);
+$shadow-xl: 0 16px 48px rgba(0, 45, 82, 0.16);
+$shadow-primary: 0 4px 16px rgba(0, 91, 172, 0.2);
+$shadow-gold: 0 4px 16px rgba(184, 149, 106, 0.25);
+
+// ========== 渐变(品牌渐变) ==========
+$grad-primary: linear-gradient(135deg, #003d73 0%, #005bac 50%, #2d7dc4 100%);
+$grad-primary-soft: linear-gradient(135deg, #f0f6fc 0%, #e6f0fa 100%);
+$grad-gold: linear-gradient(135deg, #b8956a 0%, #d4b88a 100%);
+$grad-dark: linear-gradient(180deg, #1a2332 0%, #002a52 100%);
+$grad-overlay: linear-gradient(180deg, transparent 0%, rgba(0, 42, 82, 0.85) 100%);
+
+// ========== 字体(中英文混排) ==========
+$font-sans:
+  'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Helvetica Neue', Helvetica, Arial,
+  sans-serif;
+$font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+$font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+// ========== 字号(模数 1.25) ==========
+$fs-xs: 12px;
+$fs-sm: 13px;
+$fs-base: 14px;
+$fs-md: 15px;
+$fs-lg: 16px;
+$fs-xl: 18px;
+$fs-2xl: 20px;
+$fs-3xl: 24px;
+$fs-4xl: 28px;
+$fs-5xl: 34px;
+$fs-6xl: 42px;
+
+// ========== 字重 ==========
+$fw-regular: 400;
+$fw-medium: 500;
+$fw-semibold: 600;
+$fw-bold: 700;
+
+// ========== 行高 ==========
+$lh-tight: 1.2;
+$lh-snug: 1.4;
+$lh-base: 1.6;
+$lh-relaxed: 1.75;
+
+// ========== 间距(8px 基准) ==========
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: 16px;
+$space-5: 20px;
+$space-6: 24px;
+$space-8: 32px;
+$space-10: 40px;
+$space-12: 48px;
+$space-16: 64px;
+$space-20: 80px;
+
+// ========== 断点 ==========
+$bp-xs: 375px;
+$bp-sm: 768px;
+$bp-md: 1024px;
+$bp-lg: 1280px;
+$bp-xl: 1920px;
 
 // ========== 布局 ==========
-$header-height: 120px;
-$nav-height: 48px;
-$footer-height: 240px;
-$content-width: 1200px;
+$header-height: 110px;
+$nav-height: 56px;
+$footer-height: auto;
+$content-width: 1240px;
+$content-wide: 1440px;
+
+// ========== 过渡 ==========
+$transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
 // ========== Mixin ==========
 @mixin clearfix {
@@ -80,7 +168,7 @@ $content-width: 1200px;
   width: 100%;
   max-width: $content-width;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 $space-5;
   box-sizing: border-box;
 }
 
@@ -96,4 +184,70 @@ $content-width: 1200px;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+}
+
+// 卡片悬浮效果(商业级,多层阴影)
+@mixin card-hover($transform: true) {
+  transition: all $transition-base;
+
+  &:hover {
+    @if $transform {
+      transform: translateY(-3px);
+    }
+    box-shadow: $shadow-lg;
+    border-color: transparent;
+  }
+}
+
+// 区块标题(中英文对照,参考 szpu)
+@mixin section-title {
+  display: flex;
+  align-items: baseline;
+  gap: $space-3;
+
+  .title-cn {
+    font-size: $fs-2xl;
+    font-weight: $fw-bold;
+    color: $text-primary;
+    letter-spacing: 1px;
+  }
+
+  .title-en {
+    font-size: $fs-sm;
+    color: $text-placeholder;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: $fw-regular;
+  }
+
+  .title-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, $border-light 0%, transparent 100%);
+    margin-left: $space-4;
+  }
+}
+
+// 金色装饰线
+@mixin gold-divider {
+  width: 40px;
+  height: 3px;
+  background: $grad-gold;
+  border-radius: $radius-pill;
+}
+
+// 按钮基础
+@mixin btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  padding: $space-3 $space-5;
+  font-size: $fs-base;
+  font-weight: $fw-medium;
+  border-radius: $radius-base;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all $transition-base;
+  text-decoration: none;
 }

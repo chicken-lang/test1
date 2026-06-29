@@ -1,4 +1,7 @@
-// 全局样式 - 教务处用户端
+// ====================================================================
+// 全局样式 v2.0 - 教务处用户端
+// 移除适老化, 聚焦教师/学生群体的商业级视觉
+// ====================================================================
 @use './variables.scss' as *;
 
 // ========== Reset ==========
@@ -11,21 +14,24 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: $font-sans;
   color: $text-primary;
   background-color: $bg-page;
-  line-height: 1.6;
+  line-height: $lh-base;
+  font-size: $fs-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 a {
   color: $text-regular;
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color $transition-fast;
 
   &:hover {
     color: $primary;
@@ -43,68 +49,152 @@ img {
   display: block;
 }
 
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
 // ========== 通用工具类 ==========
 .container {
   @include container;
 }
 
+.container-wide {
+  width: 100%;
+  max-width: $content-wide;
+  margin: 0 auto;
+  padding: 0 $space-5;
+  box-sizing: border-box;
+}
+
+// 文字色
 .text-primary {
   color: $primary;
 }
-
+.text-gold {
+  color: $gold;
+}
 .text-danger {
   color: $danger;
 }
+.text-secondary {
+  color: $text-secondary;
+}
 
+// 文字省略
 .text-ellipsis {
   @include text-ellipsis(1);
 }
-
 .text-ellipsis-2 {
   @include text-ellipsis(2);
 }
+.text-ellipsis-3 {
+  @include text-ellipsis(3);
+}
 
-// ========== 适老化模式(字号放大 + 高对比度) ==========
-:root[data-color-mode='elderly'] {
-  font-size: 18px;
+// 字体
+.font-serif {
+  font-family: $font-serif;
+}
 
-  body {
-    line-height: 1.8;
+// ========== 区块标题通用组件 ==========
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: $space-6;
+  padding-bottom: $space-4;
+  border-bottom: 1px solid $border-lighter;
+
+  .section-title-group {
+    display: flex;
+    align-items: baseline;
+    gap: $space-3;
+
+    .title-cn {
+      font-size: $fs-2xl;
+      font-weight: $fw-bold;
+      color: $text-primary;
+      letter-spacing: 1px;
+      position: relative;
+      padding-left: $space-4;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 70%;
+        background: $grad-gold;
+        border-radius: $radius-pill;
+      }
+    }
+
+    .title-en {
+      font-size: $fs-sm;
+      color: $text-placeholder;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-weight: $fw-regular;
+      padding-bottom: 2px;
+    }
   }
 
-  $primary: #003d73; // 加深主色提升对比度
-  $text-primary: #000000;
-  $text-regular: #333333;
+  .section-more {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+    font-size: $fs-sm;
+    color: $text-secondary;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $primary;
+      gap: $space-2;
+    }
+  }
 }
 
 // ========== 页面过渡 ==========
 .page-enter-active,
 .page-leave-active {
-  transition: opacity 0.2s;
+  transition:
+    opacity 0.25s,
+    transform 0.25s;
 }
 
 .page-enter-from,
 .page-leave-to {
   opacity: 0;
+  transform: translateY(8px);
 }
 
-// ========== 滚动条美化 ==========
+// ========== 滚动条美化(精致) ==========
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: $bg-page;
+  background: $bg-soft;
 }
 
 ::-webkit-scrollbar-thumb {
   background: $border-base;
-  border-radius: 4px;
+  border-radius: $radius-pill;
+  border: 2px solid $bg-soft;
 
   &:hover {
     background: $text-secondary;
   }
+}
+
+// ========== 选中文本 ==========
+::selection {
+  background: rgba(0, 91, 172, 0.15);
+  color: $primary-dark;
 }
 
 // ========== skip-to-content 无障碍快捷链接 ==========
@@ -114,7 +204,7 @@ img {
   left: 0;
   background: $primary;
   color: #fff;
-  padding: 8px 16px;
+  padding: $space-2 $space-4;
   z-index: 9999;
   border-radius: 0 0 $radius-base 0;
 
@@ -122,4 +212,26 @@ img {
     top: 0;
     color: #fff;
   }
+}
+
+// ========== Element Plus 全局微调 ==========
+.el-button--primary {
+  --el-button-bg-color: #{$primary};
+  --el-button-border-color: #{$primary};
+  --el-button-hover-bg-color: #{$primary-light};
+  --el-button-hover-border-color: #{$primary-light};
+  --el-button-active-bg-color: #{$primary-dark};
+  --el-button-active-border-color: #{$primary-dark};
+}
+
+// Element Plus 卡片圆角统一
+.el-card {
+  border-radius: $radius-lg;
+  border-color: $border-lighter;
+}
+
+// Element Plus 标签圆角
+.el-tag {
+  border-radius: $radius-sm;
+  font-weight: $fw-medium;
 }

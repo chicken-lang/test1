@@ -20,6 +20,8 @@ export interface Article {
 export interface Banner {
   id: number
   title: string
+  // 副标题/摘要(浮层展示)
+  desc: string
   imageUrl: string
   linkUrl: string
   sort: number
@@ -47,6 +49,7 @@ export const banners: Banner[] = [
   {
     id: 1,
     title: '2026年春季学期教学工作会议顺利召开',
+    desc: '总结春季学期教学工作成果,部署下阶段教学改革重点任务,推动人才培养质量持续提升。',
     imageUrl:
       'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=university%20campus%20teaching%20conference%20banner%20blue%20academic%20building%20spring%20semester&image_size=landscape_16_9',
     linkUrl: '/article/1',
@@ -55,6 +58,7 @@ export const banners: Banner[] = [
   {
     id: 2,
     title: '我校获批省级一流本科专业建设点',
+    desc: '深化专业内涵建设,打造高水平专业群,我校3个专业获批省级一流本科专业建设点。',
     imageUrl:
       'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=university%20professional%20construction%20achievement%20ceremony%20banner%20blue%20gold%20medal&image_size=landscape_16_9',
     linkUrl: '/article/2',
@@ -63,6 +67,7 @@ export const banners: Banner[] = [
   {
     id: 3,
     title: '教务处智慧教学平台正式上线',
+    desc: '集成课程管理、教学评价、资源共享、数据分析于一体的智慧教学平台全面启用。',
     imageUrl:
       'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=smart%20classroom%20technology%20education%20platform%20digital%20teaching%20blue%20modern&image_size=landscape_16_9',
     linkUrl: '/article/3',
