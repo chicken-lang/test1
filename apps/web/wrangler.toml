@@ -1,6 +1,6 @@
 name = "sziit-web"
 compatibility_date = "2024-07-02"
-pages_build_output_dir = "./.output/public"
+pages_build_output_dir = "./dist"
 
 [[d1_databases]]
 binding = "DB"
