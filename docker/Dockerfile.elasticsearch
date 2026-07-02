@@ -1,0 +1,10 @@
+# Elasticsearch 8 自定义镜像
+# 基于官方镜像安装 IK 中文分词插件(对应实施计划 T0.3)
+# IK 版本必须与 ES 版本严格一致
+
+FROM docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+
+# 安装 IK 中文分词插件(ik_max_word + ik_smart)
+# 插件 Release: https://github.com/medcl/elasticsearch-analysis-ik/releases
+RUN bin/elasticsearch-plugin install --batch \
+    https://release.infinilabs.com/analysis-ik/stable/elasticsearch-analysis-ik-8.11.0.zip

@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+.nuxt
+.output
+.cache
+coverage
+*.min.css

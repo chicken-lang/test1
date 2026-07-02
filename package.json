@@ -1,18 +1,52 @@
 {
-  "name": "miku_3",
+  "name": "jwc",
+  "version": "0.1.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+  "description": "深圳信息职业技术大学教务处网站重构 - Monorepo 根包",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
   },
-  "dependencies": {
-    "vue": "^3.5.32"
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:web": "pnpm --filter @jwc/web dev",
+    "dev:admin": "pnpm --filter @jwc/admin dev",
+    "dev:server": "pnpm --filter @jwc/server dev",
+    "build": "pnpm -r run build",
+    "build:shared": "pnpm --filter @jwc/shared build",
+    "build:web": "pnpm --filter @jwc/web build",
+    "build:admin": "pnpm --filter @jwc/admin build",
+    "build:server": "pnpm --filter @jwc/server build",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "lint:style": "stylelint \"**/*.{css,scss,vue}\"",
+    "lint:style:fix": "stylelint \"**/*.{css,scss,vue}\" --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,vue,js,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,vue,js,json,md,yml,yaml}\"",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r exec rimraf dist build .nuxt .output coverage node_modules/.cache",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.6",
-    "vite": "^8.0.9"
-  }
+    "@commitlint/cli": "^21.1.0",
+    "@commitlint/config-conventional": "^21.1.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-promise": "^7.3.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "postcss-html": "^1.8.1",
+    "prettier": "^3.9.1",
+    "rimraf": "^6.0.1",
+    "stylelint": "^17.14.0",
+    "stylelint-config-recommended-vue": "^1.6.1",
+    "stylelint-config-standard": "^40.0.0",
+    "typescript-eslint": "^8.62.0",
+    "vue-eslint-parser": "^10.4.1"
+  },
+  "packageManager": "pnpm@11.9.0"
 }

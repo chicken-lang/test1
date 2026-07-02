@@ -1,0 +1,8 @@
+name = "sziit-web"
+compatibility_date = "2024-07-02"
+pages_build_output_dir = "./.output/public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sziit-db"
+database_id = "5e197276-e0b5-4578-b6de-5e7e1e0213e0"

@@ -1,0 +1,25 @@
+# pnpm workspace 配置
+# 多包结构: apps/web(用户端 Nuxt) / apps/admin(CMS) / apps/server(NestJS) / packages/shared(共享)
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+allowBuilds:
+  '0': '@parcel/watcher'
+  '1': esbuild
+  '2': sharp
+  '3': vue-demi
+  '@parcel/watcher': false
+  esbuild: false
+  sharp: false
+  vue-demi: false
+  workerd: set this to true or false
+
+# 允许执行构建脚本的依赖(Nuxt/Vite/图片处理 需要的原生模块)
+onlyBuiltDependencies:
+  - esbuild
+  - '@parcel/watcher'
+  - vue-demi
+  - '@nuxt/kit'
+  - nuxt
+  - sharp

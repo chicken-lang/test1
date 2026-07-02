@@ -1,0 +1,2 @@
+# pre-commit: 对暂存区文件执行 lint-staged(ESLint/Prettier/Stylelint 自动修复)
+pnpm exec lint-staged

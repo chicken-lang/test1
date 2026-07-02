@@ -1,0 +1,38 @@
+{
+  "name": "@jwc/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "教务处网站 - 用户端(Nuxt 3 SSR/SSG)",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint . --ext .vue,.ts,.js",
+    "lint:fix": "eslint . --ext .vue,.ts,.js --fix",
+    "typecheck": "nuxt typecheck",
+    "clean": "rimraf .nuxt .output dist"
+  },
+  "dependencies": {
+    "@iconify-json/mdi": "^1.2.3",
+    "@iconify/vue": "^4.3.0",
+    "@jwc/shared": "workspace:*",
+    "@nuxt/image": "^2.0.0",
+    "@vueuse/core": "^14.3.0",
+    "element-plus": "^2.8.8",
+    "pinia": "^2.2.6"
+  },
+  "devDependencies": {
+    "@element-plus/nuxt": "^1.1.1",
+    "@nuxtjs/color-mode": "^3.5.2",
+    "@pinia/nuxt": "^0.5.5",
+    "nuxt": "^3.14.1592",
+    "rimraf": "^6.0.1",
+    "sass": "^1.81.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.4.5",
+    "wrangler": "^4.106.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@jwc/admin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "教务处网站 - CMS 后台(Vue 3 + Element Plus + Vite)",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"[admin] Vue3+Element Plus 骨架将在 T2.1 搭建,当前为 Monorepo 占位\"",
+    "build": "echo \"[admin] Vue3+Element Plus 骨架将在 T2.1 搭建\"",
+    "lint": "echo \"[admin] lint 待 T2.1 配置\"",
+    "typecheck": "echo \"[admin] typecheck 待 T2.1 配置\"",
+    "test": "echo \"[admin] test 待 T2.1 配置\""
+  },
+  "dependencies": {
+    "@jwc/shared": "workspace:*"
+  }
+}

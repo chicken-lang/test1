@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+.nuxt
+.output
+.nitro
+.cache
+coverage
+pnpm-lock.yaml
+*.min.js
+*.min.css
+CHANGELOG.md
+docs
+.husky

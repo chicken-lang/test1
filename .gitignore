@@ -1,24 +1,66 @@
-# Logs
-logs
+# ========== 依赖与构建产物 ==========
+node_modules/
+dist/
+build/
+.output/
+.nuxt/
+.nitro/
+.cache/
+*.tsbuildinfo
+
+# ========== 环境与密钥 ==========
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+*.cert
+secrets/
+
+# ========== 日志 ==========
+logs/
 *.log
 npm-debug.log*
+pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# ========== 编辑器与系统 ==========
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+desktop.ini
+
+# ========== 测试与覆盖率 ==========
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ========== Prisma ==========
+apps/server/prisma/migrations/dev.db*
+apps/server/prisma/*.db
+
+# ========== 上传与临时文件 ==========
+uploads/
+tmp/
+temp/
+
+# ========== Docker 数据卷 ==========
+docker/data/
+
+# ========== 文档生成 ==========
+ERD.svg
+ERD.png
+
+# ========== Misc ==========
+.history/
+*.local

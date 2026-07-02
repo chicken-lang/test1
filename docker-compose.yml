@@ -1,0 +1,162 @@
+# 教务处网站 - 本地开发环境容器编排
+# 对应实施计划 T0.3: 一键拉起 PG/Redis/ES/MinIO/RabbitMQ
+# 使用: docker compose up -d
+name: jwc-dev
+
+# ========== 服务定义 ==========
+services:
+  # ---------- PostgreSQL 16 主库 ----------
+  postgres:
+    image: postgres:16-alpine
+    container_name: jwc-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jwc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jwc_dev_pwd_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-jwc_dev}
+      TZ: Asia/Shanghai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init/pg:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - jwc-net
+
+  # ---------- Redis 7 缓存 ----------
+  redis:
+    image: redis:7-alpine
+    container_name: jwc-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jwc-net
+
+  # ---------- Elasticsearch 8(含 IK 中文分词) ----------
+  elasticsearch:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.elasticsearch
+    image: jwc-elasticsearch:8.11.0-ik
+    container_name: jwc-elasticsearch
+    restart: unless-stopped
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+    environment:
+      # 单节点开发模式
+      discovery.type: single-node
+      # 关闭安全认证便于本地开发(生产务必开启)
+      xpack.security.enabled: 'false'
+      xpack.security.transport.ssl.enabled: 'false'
+      ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+      TZ: Asia/Shanghai
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs http://localhost:9200/_cluster/health || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - jwc-net
+
+  # ---------- MinIO 对象存储 ----------
+  minio:
+    image: minio/minio:latest
+    container_name: jwc-minio
+    restart: unless-stopped
+    ports:
+      - '9000:9000' # S3 API
+      - '9001:9001' # 控制台
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-jwc_minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-jwc_minio_pwd_change_me}
+    command: server /data --console-address ':9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - jwc-net
+
+  # ---------- MinIO 初始化(创建 bucket,一次性) ----------
+  minio-init:
+    image: minio/mc:latest
+    container_name: jwc-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-jwc_minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-jwc_minio_pwd_change_me}
+      MINIO_BUCKET: ${MINIO_BUCKET:-jwc-attachments}
+    entrypoint: /bin/sh
+    command: /create-bucket.sh
+    volumes:
+      - ./docker/init/minio/create-bucket.sh:/create-bucket.sh:ro
+    networks:
+      - jwc-net
+    restart: 'no'
+
+  # ---------- RabbitMQ 消息队列 ----------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: jwc-rabbitmq
+    restart: unless-stopped
+    ports:
+      - '5672:5672' # AMQP
+      - '15672:15672' # 管理界面
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-jwc}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-jwc_mq_pwd_change_me}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
+      TZ: Asia/Shanghai
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - jwc-net
+
+# ========== 数据卷持久化 ==========
+volumes:
+  postgres_data:
+    name: jwc-postgres-data
+  redis_data:
+    name: jwc-redis-data
+  es_data:
+    name: jwc-es-data
+  minio_data:
+    name: jwc-minio-data
+  rabbitmq_data:
+    name: jwc-rabbitmq-data
+
+# ========== 网络 ==========
+networks:
+  jwc-net:
+    name: jwc-net
+    driver: bridge
