@@ -4,22 +4,16 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+# 允许执行构建脚本的依赖(Nuxt/Vite/Cloudflare Workers 运行时需要的原生模块)
+# pnpm v11+ 必须用 allowBuilds,旧的 onlyBuiltDependencies 在 v11 被忽略
+# Cloudflare Pages 跑 workerd binary,必须显式允许
 allowBuilds:
-  '0': '@parcel/watcher'
-  '1': esbuild
-  '2': sharp
-  '3': vue-demi
-  '@parcel/watcher': false
-  esbuild: false
-  sharp: false
-  vue-demi: false
-  workerd: set this to true or false
-
-# 允许执行构建脚本的依赖(Nuxt/Vite/图片处理 需要的原生模块)
-onlyBuiltDependencies:
-  - esbuild
-  - '@parcel/watcher'
-  - vue-demi
-  - '@nuxt/kit'
-  - nuxt
-  - sharp
+  workerd: true
+  esbuild: true
+  '@parcel/watcher': true
+  sharp: true
+  'better-sqlite3': true
+  unrs-resolver: true
+  vue-demi: true
+  '@nuxt/kit': true
+  nuxt: true
