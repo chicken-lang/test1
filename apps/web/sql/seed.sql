@@ -25,6 +25,16 @@ INSERT INTO columns (id, parent_id, name, code, sort_order) VALUES
 (22, 2, '考试公告', 'notice-exam', 2),
 (23, 2, '选课通知', 'notice-course', 3);
 
+-- 栏目 3 的子栏目
+INSERT INTO columns (id, parent_id, name, code, sort_order) VALUES
+(31, 3, '教学新闻', 'news-teaching', 1),
+(32, 3, '教学研究', 'news-research', 2);
+
+-- 栏目 4 的子栏目
+INSERT INTO columns (id, parent_id, name, code, sort_order) VALUES
+(41, 4, '办事流程', 'guide-process', 1),
+(42, 4, '常见问题', 'guide-faq', 2);
+
 -- 2. 文章数据
 INSERT INTO articles (column_id, title, content, summary, author, source, publish_date, views, is_top) VALUES
 (21, '关于2026年春季学期开学时间调整的通知',
