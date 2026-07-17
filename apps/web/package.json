@@ -13,7 +13,11 @@
     "lint": "eslint . --ext .vue,.ts,.js",
     "lint:fix": "eslint . --ext .vue,.ts,.js --fix",
     "typecheck": "nuxt typecheck",
-    "clean": "rimraf .nuxt .output dist"
+    "clean": "rimraf .nuxt .output dist",
+    "db:schema": "wrangler d1 execute jwc-db --local --file=./sql/schema.sql",
+    "db:seed": "wrangler d1 execute jwc-db --local --file=./sql/seed.sql",
+    "db:link": "node ./scripts/link-d1-dev.mjs",
+    "db:reset": "rimraf .wrangler/state && pnpm db:schema && pnpm db:seed && pnpm db:link"
   },
   "dependencies": {
     "@iconify-json/mdi": "^1.2.3",
@@ -21,6 +25,7 @@
     "@jwc/shared": "workspace:*",
     "@nuxt/image": "^2.0.0",
     "@vueuse/core": "^14.3.0",
+    "bcryptjs": "^2.4.3",
     "element-plus": "^2.8.8",
     "jose": "^6.2.3",
     "pinia": "^2.2.6"

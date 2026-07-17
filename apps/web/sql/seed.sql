@@ -107,10 +107,14 @@ INSERT INTO disclosure_directory (category, title, content, publish_date) VALUES
 ('招生就业', '2025年招生章程', '2025年我校计划招生4500人,具体招生章程详见招生办网站。', '2025-06-01'),
 ('财务公开', '2025年度财务预算', '2025年度学校财务预算经教代会审议通过,详见附件。', '2025-03-15');
 
--- 7. 用户数据 (测试账号,密码都是 123456)
-INSERT INTO users (username, password, nickname, role, status) VALUES
-('admin', '123456', '系统管理员', 'admin', 1),
-('test', '123456', '测试用户', 'user', 1);
+-- 7. 用户数据
+-- 原始密码: 123456
+-- 前端 sha256("123456") = 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
+-- 后端 bcrypt(sha256("123456")) → 存入 password_bcrypt
+-- account_status: 1=正常 0=禁用
+INSERT INTO users (username, password_bcrypt, nickname, role, account_status) VALUES
+('admin', '$2a$10$N0xcgc5bRtiG6ioG0OtcFerkR7ILOpFZJGrAg9N.zsZV1sHNvu8fO', '系统管理员', 'admin', 1),
+('test', '$2a$10$N0xcgc5bRtiG6ioG0OtcFerkR7ILOpFZJGrAg9N.zsZV1sHNvu8fO', '测试用户', 'user', 1);
 
 -- 8. 下载文件数据
 INSERT INTO downloads (category, title, description, file_url, file_size, file_type) VALUES

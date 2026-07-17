@@ -1,8 +1,7 @@
-// Nuxt Server Route - 文章详情 API
-// 路径: GET /api/articles/:id
-
-import { MOCK_ARTICLES, isLocalDev } from '../../utils/mock'
-
+/**
+ * 文章详情 API
+ * GET /api/articles/:id
+ */
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) {
@@ -10,15 +9,8 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    if (isLocalDev(event)) {
-      const article = MOCK_ARTICLES.find((a) => a.id === parseInt(id))
-      if (!article) {
-        throw createError({ statusCode: 404, statusMessage: '文章不存在' })
-      }
-      return { code: 0, data: article }
-    }
-
     const { DB } = event.context.cloudflare.env as { DB: D1Database }
+
     const article = await DB.prepare(
       `SELECT a.id, a.title, a.content, a.publish_date, a.views, a.is_top,
               a.column_id, c.name as column_name

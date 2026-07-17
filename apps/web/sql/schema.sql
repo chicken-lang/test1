@@ -92,21 +92,35 @@ CREATE TABLE IF NOT EXISTS disclosure_directory (
 );
 
 -- 7. 用户表
+-- password_bcrypt: bcrypt(sha256(明文)) 双层哈希
+-- account_status: 1=正常 0=禁用
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
+  password_bcrypt TEXT NOT NULL,
   nickname TEXT,
   email TEXT,
   phone TEXT,
   avatar TEXT,
   role TEXT DEFAULT 'user',
-  status INTEGER DEFAULT 1,
+  account_status INTEGER DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+-- 登录令牌表（自定义随机Token，替代JWT）
+CREATE TABLE IF NOT EXISTS user_token (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  expire_time DATETIME NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_token_username ON user_token(username);
+CREATE INDEX IF NOT EXISTS idx_user_token_token ON user_token(token);
 
 -- 8. 用户收藏表
 CREATE TABLE IF NOT EXISTS user_favorites (

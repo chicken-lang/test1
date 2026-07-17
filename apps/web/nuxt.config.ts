@@ -40,9 +40,7 @@ export default defineNuxtConfig({
         },
         { name: 'keywords', content: '教务处,深圳信息职业技术大学,教学管理,教务通知' },
       ],
-      link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-      ],
+      link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
     },
   },
 
@@ -78,5 +76,10 @@ export default defineNuxtConfig({
   // API 路由统一走 /functions/api/** (与 wrangler.toml 的 d1 binding 配合)
   nitro: {
     preset: 'cloudflare-pages',
+    cloudflareDev: {
+      // 本地开发时读取 wrangler.toml 中的 D1 绑定
+      configPath: './wrangler.toml',
+      persistDir: '.wrangler/state',
+    },
   },
 })

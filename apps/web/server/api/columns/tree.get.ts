@@ -1,26 +1,18 @@
-// Nuxt Server Route - 栏目树 API
-// 路径: GET /api/columns/tree
-
-import { MOCK_COLUMNS, isLocalDev } from '../../utils/mock'
-
+/**
+ * 栏目树 API
+ * GET /api/columns/tree
+ */
 export default defineEventHandler(async (event) => {
   try {
-    let allColumns: any[]
+    const { DB } = event.context.cloudflare.env as { DB: D1Database }
 
-    if (isLocalDev(event)) {
-      // 本地开发：使用 mock 数据
-      allColumns = [...MOCK_COLUMNS]
-    } else {
-      // 生产环境：Cloudflare D1
-      const { DB } = event.context.cloudflare.env as { DB: D1Database }
-      const result = await DB.prepare(
-        `SELECT id, parent_id, name, code, sort_order, icon
-         FROM columns
-         WHERE status = 1
-         ORDER BY sort_order ASC`,
-      ).all()
-      allColumns = result.results as any[]
-    }
+    const result = await DB.prepare(
+      `SELECT id, parent_id, name, code, sort_order, icon
+       FROM columns
+       WHERE status = 1
+       ORDER BY sort_order ASC`,
+    ).all()
+    const allColumns = result.results as any[]
 
     // 构建树形结构
     const map = new Map<number, any>()

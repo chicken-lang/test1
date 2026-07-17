@@ -1,37 +1,20 @@
-// Nuxt Server Route - 用户登录 API
-// 路径: POST /api/auth/login
-
-import { SignJWT } from 'jose'
-
-// 本地开发模拟用户数据（生产环境使用 Cloudflare D1）
-const MOCK_USERS = [
-  {
-    id: 1,
-    username: 'admin',
-    password: '123456',
-    nickname: '系统管理员',
-    role: 'admin',
-    status: 1,
-  },
-  { id: 2, username: 'test', password: '123456', nickname: '测试用户', role: 'user', status: 1 },
-]
-
-async function findUser(username: string, password: string, event: any) {
-  // 生产环境：从 Cloudflare D1 查询
-  const DB = event.context.cloudflare?.env?.DB as D1Database | undefined
-  if (DB) {
-    return DB.prepare(
-      'SELECT id, username, nickname, role, status FROM users WHERE username = ? AND password = ?',
-    )
-      .bind(username, password)
-      .first()
-  }
-
-  // 本地开发：使用 mock 数据
-  return MOCK_USERS.find((u) => u.username === username && u.password === password) ?? null
-}
+/**
+ * 用户登录 API
+ * POST /api/auth/login
+ *
+ * 流程:
+ *   1. 参数校验
+ *   2. 查 user 表
+ *   3. bcrypt 比对（前端 sha256 vs 库 password_bcrypt）
+ *   4. 删除旧 Token（单点登录）
+ *   5. 生成随机 Token 写入 user_token
+ *   6. 返回
+ */
+import { verifyPassword } from '../../utils/password'
+import { generateToken, getExpireTime, deleteUserTokens, insertToken } from '../../utils/token'
 
 export default defineEventHandler(async (event) => {
+  // ---- 1. 参数校验 ----
   const body = await readBody<{ username: string; password: string }>(event)
 
   if (!body) {
@@ -47,40 +30,66 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: '用户名和密码不能为空' })
   }
 
+  if (!/^[a-zA-Z0-9_]{2,32}$/.test(username)) {
+    throw createError({ statusCode: 400, statusMessage: '用户名格式不正确' })
+  }
+
+  if (!/^[a-f0-9]{64}$/i.test(password)) {
+    throw createError({ statusCode: 400, statusMessage: '密码格式不正确（需为 sha256 64位 hex）' })
+  }
+
   try {
-    const user: any = await findUser(username, password, event)
+    const { DB } = event.context.cloudflare.env as { DB: D1Database }
+
+    // ---- 2. 查数据库用户 ----
+    const user = await DB.prepare(
+      'SELECT id, username, password_bcrypt, nickname, role, account_status FROM users WHERE username = ?',
+    )
+      .bind(username)
+      .first<{
+        id: number
+        username: string
+        password_bcrypt: string
+        nickname: string
+        role: string
+        account_status: number
+      }>()
 
     if (!user) {
-      throw createError({ statusCode: 401, statusMessage: '用户名或密码错误' })
+      throw createError({ statusCode: 401, statusMessage: '账号不存在' })
     }
 
-    if (user.status !== 1) {
+    // ---- 3. 账号状态校验 ----
+    if (user.account_status !== 1) {
       throw createError({ statusCode: 403, statusMessage: '账号已被禁用' })
     }
 
-    const config = useRuntimeConfig(event)
-    const jwtSecret = new TextEncoder().encode(
-      config.jwtSecret || process.env.JWT_SECRET || 'dev_jwt_secret_change_in_production',
-    )
+    // ---- 4. bcrypt 密码比对 ----
+    const valid = await verifyPassword(password, user.password_bcrypt)
+    if (!valid) {
+      throw createError({ statusCode: 401, statusMessage: '账号或密码错误' })
+    }
 
-    const token = await new SignJWT({
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('2h')
-      .sign(jwtSecret)
+    // ---- 5. 单点登录：删旧 Token，插新 Token ----
+    await deleteUserTokens(username, event)
 
+    const token = generateToken()
+    const expireTime = getExpireTime()
+    await insertToken(username, token, expireTime, event)
+
+    // ---- 6. 返回 ----
     return {
-      error: 0,
+      code: 0,
       msg: 'ok',
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        password,
+      data: {
+        token,
+        expire_time: expireTime,
+        user: {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+          role: user.role,
+        },
       },
     }
   } catch (err: any) {

@@ -1,8 +1,7 @@
-// Nuxt Server Route - 文章列表 API
-// 路径: GET /api/articles?column_id=xxx&page=1&page_size=10
-
-import { MOCK_ARTICLES, isLocalDev } from '../../utils/mock'
-
+/**
+ * 文章列表 API
+ * GET /api/articles?column_id=xxx&page=1&page_size=10
+ */
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const columnId = query.column_id as string | undefined
@@ -11,25 +10,6 @@ export default defineEventHandler(async (event) => {
   const offset = (page - 1) * pageSize
 
   try {
-    if (isLocalDev(event)) {
-      let list = [...MOCK_ARTICLES]
-      if (columnId) {
-        list = list.filter((a) => a.column_id === parseInt(columnId))
-      }
-      // 按 is_top 降序、publish_date 降序排序
-      list.sort((a, b) => {
-        if (a.is_top !== b.is_top) return b.is_top - a.is_top
-        return b.publish_date.localeCompare(a.publish_date)
-      })
-      const total = list.length
-      list = list.slice(offset, offset + pageSize)
-
-      return {
-        code: 0,
-        data: { list, total, page, page_size: pageSize },
-      }
-    }
-
     const { DB } = event.context.cloudflare.env as { DB: D1Database }
 
     // 统计总数
