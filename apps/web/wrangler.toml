@@ -1,9 +1,0 @@
-name = "sziit-web"
-compatibility_date = "2026-06-29"
-compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "dist"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "jwc-db"
-database_id = "5e197276-e0b5-4578-b6de-5e7e1e0213e0"

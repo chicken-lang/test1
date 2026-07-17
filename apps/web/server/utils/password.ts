@@ -6,7 +6,6 @@
  *   后端 admin 新增用户: sha256(明文) → bcrypt(sha256结果) → 存入 password_bcrypt
  *   后端 login 验证: bcrypt.compare(前端传来的sha256, 库中的password_bcrypt)
  */
-import { createHash } from 'crypto'
 import bcrypt from 'bcryptjs'
 
 const BCRYPT_ROUNDS = 10
@@ -16,8 +15,10 @@ const BCRYPT_ROUNDS = 10
  * @param plaintext 原始密码
  * @returns hex 字符串
  */
-export function sha256(plaintext: string): string {
-  return createHash('sha256').update(plaintext).digest('hex')
+export async function sha256(plaintext: string): Promise<string> {
+  const data = new TextEncoder().encode(plaintext)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hashBuffer), (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 /**
@@ -25,8 +26,9 @@ export function sha256(plaintext: string): string {
  * @param plaintext 管理员提交的明文密码
  * @returns bcrypt 哈希字符串
  */
-export function hashPassword(plaintext: string): string {
-  return bcrypt.hashSync(sha256(plaintext), BCRYPT_ROUNDS)
+export async function hashPassword(plaintext: string): Promise<string> {
+  const hash = await sha256(plaintext)
+  return bcrypt.hashSync(hash, BCRYPT_ROUNDS)
 }
 
 /**

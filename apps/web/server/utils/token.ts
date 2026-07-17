@@ -5,7 +5,7 @@
  * 单点登录: 新登录时删除同账号所有旧 Token
  * 有效期: 24 小时
  */
-import { randomBytes } from 'crypto'
+// Cloudflare Workers 使用 Web Crypto API，不依赖 Node.js crypto
 
 const TOKEN_BYTES = 32
 const TOKEN_EXPIRE_HOURS = 24
@@ -32,7 +32,9 @@ export function extractBearerToken(event: any): string | null {
 
 /** 生成随机 Token 字符串（64 位 hex） */
 export function generateToken(): string {
-  return randomBytes(TOKEN_BYTES).toString('hex')
+  const bytes = new Uint8Array(TOKEN_BYTES)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 /** 计算过期时间 */

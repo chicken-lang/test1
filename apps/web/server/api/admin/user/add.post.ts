@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // 双层哈希后写入
-    const hashedPwd = hashPassword(password)
+    const hashedPwd = await hashPassword(password)
 
     await DB.prepare(
       `INSERT INTO users (username, password_bcrypt, nickname, role, account_status)
