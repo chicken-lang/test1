@@ -6,8 +6,10 @@
  * - 所有函数在 D1 不可用时返回 null，由调用方决定是否降级到 mock
  * - 写操作同时更新 D1 和内存 mock store，保证同会话一致性
  * - 密码统一使用 SHA-256（前端 RSA 降级模式）
+ *
+ * 注意：此文件不依赖 node:crypto，确保在 Workers 环境安全加载。
+ *       需要 SHA-256 的写操作（重置密码等）由调用方（admin-mock.ts）计算哈希后传入。
  */
-import { createHash } from 'node:crypto'
 
 // ========== D1 Binding ==========
 
@@ -17,12 +19,6 @@ export function getD1(event: any): any {
   } catch {
     return null
   }
-}
-
-// ========== SHA-256 ==========
-
-function sha256(s: string): string {
-  return createHash('sha256').update(s, 'utf8').digest('hex')
 }
 
 // ========== Admin 查询 ==========
@@ -97,9 +93,8 @@ export async function d1AdminDetail(db: any, id: number) {
   return admin ? adminToPublic(admin) : null
 }
 
-export async function d1CreateAdmin(db: any, body: Record<string, any>) {
+export async function d1CreateAdmin(db: any, body: Record<string, any>, passwordHash: string) {
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
-  const passwordHash = sha256(body.password || '123456')
   const bindColumnIds = JSON.stringify(Array.isArray(body.bindColumnIds) ? body.bindColumnIds : [])
   const result = await db.prepare(
     `INSERT INTO Admin (username, passwordHash, nickname, role, email, phone, status, bindColumnIds, unionId, createdAt, updatedAt)
@@ -137,10 +132,9 @@ export async function d1FreezeAdmin(db: any, id: number, freeze: boolean) {
     .bind(freeze ? 'frozen' : 'active', id).run()
 }
 
-export async function d1ResetPassword(db: any, id: number, newPassword: string) {
-  const hash = sha256(newPassword || '123456')
+export async function d1ResetPassword(db: any, id: number, passwordHash: string) {
   await db.prepare("UPDATE Admin SET passwordHash = ?, updatedAt = datetime('now') WHERE id = ?")
-    .bind(hash, id).run()
+    .bind(passwordHash, id).run()
 }
 
 export async function d1UpdateAdminRole(db: any, id: number, role: string, bindColumnIds: number[]) {

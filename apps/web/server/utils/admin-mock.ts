@@ -1060,7 +1060,7 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
       if (db) {
         try {
           const body = getBody(event)
-          const result = await d1.d1CreateAdmin(db, body)
+          const result = await d1.d1CreateAdmin(db, body, sha256(body.password || '123456'))
           // 同步到内存 mock
           const newId = result.id || (Math.max(0, ...mockAdminsStore.map(a => a.id)) + 1)
           mockAdminsStore.push({
@@ -1205,7 +1205,7 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
       const db = d1.getD1(event)
       if (db) {
         try {
-          await d1.d1ResetPassword(db, id, body.newPassword || '123456')
+          await d1.d1ResetPassword(db, id, sha256(body.newPassword || '123456'))
           const idx = mockAdminsStore.findIndex(a => a.id === id)
           if (idx >= 0) mockAdminsStore[idx].password = sha256(body.newPassword || '123456')
           return ok(null, '密码已重置')
@@ -1421,7 +1421,7 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
         const db = d1.getD1(event)
         if (db) {
           try {
-            await d1.d1ResetPassword(db, adminId, body.newPassword || '123456')
+            await d1.d1ResetPassword(db, adminId, sha256(body.newPassword || '123456'))
             const idx = mockAdminsStore.findIndex(a => a.id === adminId)
             if (idx >= 0) mockAdminsStore[idx].password = sha256(body.newPassword || '123456')
             return ok(null, '密码修改成功')
