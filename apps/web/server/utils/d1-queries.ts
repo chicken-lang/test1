@@ -7,6 +7,7 @@
  * - 写操作同时更新 D1 和内存 mock store，保证同会话一致性
  * - 密码统一使用 SHA-256（前端 RSA 降级模式）
  */
+import { createHash } from 'node:crypto'
 
 // ========== D1 Binding ==========
 
@@ -21,16 +22,7 @@ export function getD1(event: any): any {
 // ========== SHA-256 ==========
 
 function sha256(s: string): string {
-  // Cloudflare Workers 环境使用 SubtleCrypto (异步)
-  // 但此处为同步工具函数，使用 Node.js crypto（本地 dev）或纯 JS 实现
-  try {
-    const { createHash } = require('node:crypto')
-    return createHash('sha256').update(s, 'utf8').digest('hex')
-  } catch {
-    // Workers 环境 fallback - 简单 SHA-256 不可用，返回空串
-    // 实际登录时前端传来的已经是 SHA-256 哈希，此处仅用于密码重置等写操作
-    return ''
-  }
+  return createHash('sha256').update(s, 'utf8').digest('hex')
 }
 
 // ========== Admin 查询 ==========
