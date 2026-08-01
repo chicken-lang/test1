@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // ====== 降级: Mock 登录(后端不可用时) ======
-  const mockResult = mockLogin(username, password)
+  const mockResult = await mockLogin(username, password, event)
 
   if (mockResult === null) {
     throw createError({ statusCode: 401, message: '账号或密码错误' })

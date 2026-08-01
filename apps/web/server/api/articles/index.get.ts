@@ -1,8 +1,10 @@
 // Nuxt Server Route - 文章列表 API
 // 路径: GET /api/articles?column_id=xxx&page=1&page_size=10
-// 模式: 代理后端 NestJS / Mock 降级
+// 模式: 代理后端 NestJS / D1 / Mock 降级
 // V2.0字段映射: id→articleId, publishDate→publishedAt, views→viewCount, columnName→columnName
 // 安全: 后端公开API已过滤 DISABLED 栏目；后端业务错误(404/403)不降级到Mock
+
+import * as d1 from '../../utils/d1-queries'
 
 const BACKEND_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3001'
 
@@ -61,37 +63,62 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 后端返回非0 code（业务错误，如栏目不存在/停用）→ 不降级到Mock，返回空列表
     return {
       code: 0,
-      data: {
-        list: [],
-        total: 0,
-        page,
-        page_size: pageSize,
-      },
+      data: { list: [], total: 0, page, page_size: pageSize },
     }
   } catch (err: any) {
-    // 仅连接失败（网络错误/超时）时降级到 Mock
-    // 后端返回的 404/403 业务错误已经在上面处理，不会进入这里
-    // $fetch 对非 2xx 响应会抛出 FetchError，需要检查是否为连接错误
     const isConnectionError = !err?.response && (err?.code === 'ECONNREFUSED' || err?.code === 'ETIMEDOUT' || err?.name === 'FetchError' && !err?.response)
     if (!isConnectionError) {
-      // 后端返回了 HTTP 错误（如 404/403），说明后端正常工作但拒绝了请求
-      // 不降级到 Mock，返回空列表
       return {
         code: 0,
-        data: {
-          list: [],
-          total: 0,
-          page,
-          page_size: pageSize,
-        },
+        data: { list: [], total: 0, page, page_size: pageSize },
       }
     }
   }
 
-  // ===== Mock fallback（仅连接失败时降级） =====
+  // ===== D1 查询（后端不可用时） =====
+  const db = d1.getD1(event)
+  if (db) {
+    try {
+      const d1Query: Record<string, any> = { page, pageSize }
+      if (columnSlug) {
+        // 先查栏目 ID
+        const col = await db.prepare('SELECT id FROM Column WHERE columnSlug = ?').bind(columnSlug).first()
+        if (col) d1Query.columnId = col.id
+      }
+      if (keyword) d1Query.keyword = keyword
+      d1Query.status = 'published'
+
+      const r = await d1.d1Articles(db, d1Query)
+      const mappedList = (r.list || []).map((item: any) => ({
+        id: item.id,
+        articleId: item.id,
+        title: item.title,
+        summary: item.summary || '',
+        publishedAt: item.publishedAt,
+        publishDate: item.publishedAt ? new Date(item.publishedAt).toISOString().slice(0, 10) : '',
+        source: item.source || '',
+        viewCount: item.viewCount || 0,
+        views: item.viewCount || 0,
+        columnSlug: '',
+        columnName: '',
+        columnTitle: '',
+        isTop: item.isTop || false,
+        coverImageUrl: item.coverImageUrl || null,
+        articleSlug: item.articleSlug || '',
+      }))
+      return {
+        code: 0,
+        data: { list: mappedList, total: r.total, page: r.page, page_size: r.pageSize },
+        message: 'ok (d1)',
+      }
+    } catch (e: any) {
+      console.warn('[articles] D1 query failed:', e?.message || e)
+    }
+  }
+
+  // ===== Mock fallback =====
   const result = mockArticlesList(columnSlug || undefined, page, pageSize)
   return apiPage(result.list, result.total, result.page, result.pageSize)
 })

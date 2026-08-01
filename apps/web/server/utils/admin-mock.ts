@@ -9,6 +9,7 @@
 import { createHash } from 'node:crypto'
 import { getQuery, getRequestHeader } from 'h3'
 import { addMockColumn, updateMockColumn } from './mock-api'
+import * as d1 from './d1-queries'
 
 // ========== 请求体解析辅助 ==========
 /** 从 event.context 安全获取请求体 (处理 string / object 两种情况) */
@@ -135,7 +136,20 @@ function toPublic(a: MockAdmin) {
 
 // ========== Mock 登录 ==========
 /** @returns null=账号不存在或密码错误; {locked:true}=已冻结; 正常对象=登录成功 */
-export function mockLogin(username: string, passwordSha256: string) {
+export async function mockLogin(username: string, passwordSha256: string, event?: any) {
+  // ====== 优先查 D1 ======
+  if (event) {
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        const result = await d1.d1Login(db, username, passwordSha256)
+        if (result) return result
+      } catch (e: any) {
+        console.warn('[mockLogin] D1 query failed, falling back to mock:', e?.message || e)
+      }
+    }
+  }
+  // ====== 降级: 内存 Mock ======
   const admin = mockAdminsStore.find(a => a.username === username)
   if (!admin || admin.password !== passwordSha256) return null
   if (admin.status !== 'active') return { locked: true } as const
@@ -892,6 +906,21 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
     const body = getBody(event)
     if (match) {
       const adminId = parseInt(match[1])
+      const db = d1.getD1(event)
+      if (db) {
+        try {
+          await d1.d1UpdateAdmin(db, adminId, body)
+          // 同步内存
+          const idx = mockAdminsStore.findIndex(a => a.id === adminId)
+          if (idx >= 0) {
+            if (body.phone !== undefined) mockAdminsStore[idx].phone = body.phone
+            if (body.nickname !== undefined) mockAdminsStore[idx].nickname = body.nickname
+          }
+          return ok({ phone: body.phone, nickname: body.nickname }, '个人资料已更新')
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 profile update failed:', e?.message || e)
+        }
+      }
       const idx = mockAdminsStore.findIndex(a => a.id === adminId)
       if (idx >= 0) {
         if (body.phone !== undefined) mockAdminsStore[idx].phone = body.phone
@@ -905,7 +934,38 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // ----- /column (栏目管理 Mock 降级) -----
   if (cleanPath === '/column' && method === 'POST') {
     const body = getBody(event)
-    // 生成新 ID：取 mock 数据中最大 columnId + 1
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+        const result = await db.prepare(
+          `INSERT INTO Column (parentId, columnName, columnSlug, responsibleBusiness, sortOrder, status, description, linkUrl, version, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?, ?, 1, ?, ?)`
+        ).bind(
+          body.parentId ?? null, body.columnName || '', body.columnSlug || '',
+          body.responsibleBusiness ?? null, body.sortOrder ?? 0,
+          body.description ?? null, body.linkUrl ?? null, now, now
+        ).run()
+        const newId = result.meta.last_row_id
+        const newCol = {
+          columnId: newId,
+          columnName: body.columnName || '',
+          columnSlug: body.columnSlug || '',
+          parentId: body.parentId ?? null,
+          responsibleBusiness: body.responsibleBusiness ?? null,
+          sortOrder: body.sortOrder ?? 0,
+          status: 'ACTIVE',
+          description: body.description ?? null,
+          linkUrl: body.linkUrl ?? null,
+          version: 1,
+        }
+        addMockColumn(newCol)
+        return ok(newCol, '栏目创建成功')
+      } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 create column failed:', e?.message || e)
+      }
+    }
+    // Mock fallback
     const newId = 10000 + Date.now() % 10000
     const newCol = {
       columnId: newId,
@@ -925,7 +985,6 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
 
   // /column/sort (PUT) - 排序
   if (cleanPath === '/column/sort' && method === 'PUT') {
-    // Mock 降级：前端已更新内存中的 sortOrder，直接返回成功
     return ok(null, '排序更新成功')
   }
 
@@ -934,7 +993,31 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   if (colUpdateMatch && method === 'PUT') {
     const colId = Number(colUpdateMatch[1])
     const body = getBody(event)
-    // 更新 mock 栏目树中的对应节点
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        const updates: string[] = []
+        const params: any[] = []
+        for (const key of ['columnName', 'columnSlug', 'responsibleBusiness', 'sortOrder', 'status', 'description', 'linkUrl']) {
+          if (body[key] !== undefined) {
+            const col = key === 'columnName' ? 'columnName' : key === 'columnSlug' ? 'columnSlug'
+              : key === 'responsibleBusiness' ? 'responsibleBusiness' : key === 'sortOrder' ? 'sortOrder'
+              : key === 'status' ? 'status' : key === 'description' ? 'description' : 'linkUrl'
+            updates.push(`${col} = ?`)
+            params.push(body[key])
+          }
+        }
+        if (updates.length > 0) {
+          updates.push("updatedAt = datetime('now')")
+          params.push(colId)
+          await db.prepare(`UPDATE Column SET ${updates.join(', ')} WHERE id = ?`).bind(...params).run()
+        }
+        updateMockColumn(colId, body)
+        return ok(null, '栏目更新成功')
+      } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 update column failed:', e?.message || e)
+      }
+    }
     updateMockColumn(colId, body)
     return ok(null, '栏目更新成功')
   }
@@ -942,19 +1025,62 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // /column/:id (DELETE) - 删除栏目
   if (colUpdateMatch && method === 'DELETE') {
     const colId = Number(colUpdateMatch[1])
-    // Mock 降级：标记为 DELETED
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        await db.prepare("UPDATE Column SET status = 'DELETED', updatedAt = datetime('now') WHERE id = ?").bind(colId).run()
+        updateMockColumn(colId, { status: 'DELETED' })
+        return ok(null, '栏目已删除')
+      } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 delete column failed:', e?.message || e)
+      }
+    }
     updateMockColumn(colId, { status: 'DELETED' })
     return ok(null, '栏目已删除')
   }
 
   // ----- /admin -----
   if (cleanPath === '/admin') {
+    const db = d1.getD1(event)
     if (method === 'GET') {
+      // 优先 D1
+      if (db) {
+        try {
+          const r = await d1.d1AdminList(db, query)
+          return page(r.list, r.total, r.page, r.pageSize)
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 admin list failed:', e?.message || e)
+        }
+      }
       const r = mockAdminList(query)
       return page(r.list, r.total, r.page, r.pageSize)
     }
     if (method === 'POST') {
-      // 新增管理员账号
+      // 优先 D1
+      if (db) {
+        try {
+          const body = getBody(event)
+          const result = await d1.d1CreateAdmin(db, body)
+          // 同步到内存 mock
+          const newId = result.id || (Math.max(0, ...mockAdminsStore.map(a => a.id)) + 1)
+          mockAdminsStore.push({
+            id: newId,
+            username: body.username,
+            password: sha256(body.password || '123456'),
+            nickname: body.nickname || body.username,
+            role: body.role || 'editor',
+            email: body.email || '',
+            status: 'active',
+            bind_column_ids: Array.isArray(body.bindColumnIds) ? body.bindColumnIds : [],
+            union_id: `U${Date.now()}`,
+            created_at: new Date().toISOString().slice(0, 10),
+          })
+          return ok({ id: newId }, '新增成功')
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 create admin failed:', e?.message || e)
+        }
+      }
+      // Mock fallback
       const body = getBody(event)
       const newId = Math.max(0, ...mockAdminsStore.map(a => a.id)) + 1
       mockAdminsStore.push({
@@ -979,6 +1105,22 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
     const body = getBody(event)
     const adminIds: number[] = Array.isArray(body.adminIds) ? body.adminIds : []
     const bindColumnIds: number[] = Array.isArray(body.bindColumnIds) ? body.bindColumnIds : []
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        for (const id of adminIds) {
+          await d1.d1UpdateAdminRole(db, id, '', bindColumnIds) // 只更新 bindColumnIds
+        }
+        // 同步内存
+        for (const id of adminIds) {
+          const idx = mockAdminsStore.findIndex(a => a.id === id)
+          if (idx >= 0) mockAdminsStore[idx].bind_column_ids = [...bindColumnIds]
+        }
+        return ok(null, '批量分配成功')
+      } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 batch-bind failed:', e?.message || e)
+      }
+    }
     for (const id of adminIds) {
       const idx = mockAdminsStore.findIndex(a => a.id === id)
       if (idx >= 0) mockAdminsStore[idx].bind_column_ids = [...bindColumnIds]
@@ -1002,6 +1144,25 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
     if (roleMatch) {
       const id = parseInt(roleMatch[1])
       const body = getBody(event)
+      const db = d1.getD1(event)
+      if (db) {
+        try {
+          await d1.d1UpdateAdminRole(db, id, body.role, Array.isArray(body.bindColumnIds) ? body.bindColumnIds : [])
+          // 同步内存
+          const idx = mockAdminsStore.findIndex(a => a.id === id)
+          if (idx >= 0) {
+            mockAdminsStore[idx] = {
+              ...mockAdminsStore[idx],
+              role: body.role ?? mockAdminsStore[idx].role,
+              bind_column_ids: Array.isArray(body.bindColumnIds) ? body.bindColumnIds : mockAdminsStore[idx].bind_column_ids,
+            }
+          }
+          return ok(null, '角色权限已更新,目标账号需重新登录')
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 update role failed:', e?.message || e)
+        }
+      }
+      // Mock fallback
       const idx = mockAdminsStore.findIndex(a => a.id === id)
       if (idx >= 0) {
         mockAdminsStore[idx] = {
@@ -1020,10 +1181,19 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
     if (freezeMatch && method === 'POST') {
       const id = parseInt(freezeMatch[1])
       const body = getBody(event)
-      const idx = mockAdminsStore.findIndex(a => a.id === id)
-      if (idx >= 0) {
-        mockAdminsStore[idx].status = body.freeze ? 'frozen' : 'active'
+      const db = d1.getD1(event)
+      if (db) {
+        try {
+          await d1.d1FreezeAdmin(db, id, !!body.freeze)
+          const idx = mockAdminsStore.findIndex(a => a.id === id)
+          if (idx >= 0) mockAdminsStore[idx].status = body.freeze ? 'frozen' : 'active'
+          return ok(null, body.freeze ? '已冻结' : '已解禁')
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 freeze admin failed:', e?.message || e)
+        }
       }
+      const idx = mockAdminsStore.findIndex(a => a.id === id)
+      if (idx >= 0) mockAdminsStore[idx].status = body.freeze ? 'frozen' : 'active'
       return ok(null, body.freeze ? '已冻结' : '已解禁')
     }
 
@@ -1032,19 +1202,56 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
     if (resetMatch && method === 'POST') {
       const id = parseInt(resetMatch[1])
       const body = getBody(event)
-      const idx = mockAdminsStore.findIndex(a => a.id === id)
-      if (idx >= 0) {
-        mockAdminsStore[idx].password = sha256(body.newPassword || '123456')
+      const db = d1.getD1(event)
+      if (db) {
+        try {
+          await d1.d1ResetPassword(db, id, body.newPassword || '123456')
+          const idx = mockAdminsStore.findIndex(a => a.id === id)
+          if (idx >= 0) mockAdminsStore[idx].password = sha256(body.newPassword || '123456')
+          return ok(null, '密码已重置')
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 reset password failed:', e?.message || e)
+        }
       }
+      const idx = mockAdminsStore.findIndex(a => a.id === id)
+      if (idx >= 0) mockAdminsStore[idx].password = sha256(body.newPassword || '123456')
       return ok(null, '密码已重置')
     }
 
     // /admin/:id (GET/PUT/DELETE)
     if (sub.match(/^\d+$/)) {
       const id = parseInt(sub)
-      if (method === 'GET') return ok(mockAdminDetail(id))
+      const db = d1.getD1(event)
+      if (method === 'GET') {
+        if (db) {
+          try {
+            const detail = await d1.d1AdminDetail(db, id)
+            if (detail) return ok(detail)
+          } catch (e: any) {
+            console.warn('[mockAdminResponse] D1 admin detail failed:', e?.message || e)
+          }
+        }
+        return ok(mockAdminDetail(id))
+      }
       if (method === 'PUT') {
         const body = getBody(event)
+        if (db) {
+          try {
+            await d1.d1UpdateAdmin(db, id, body)
+            const idx = mockAdminsStore.findIndex(a => a.id === id)
+            if (idx >= 0) {
+              mockAdminsStore[idx] = {
+                ...mockAdminsStore[idx],
+                nickname: body.nickname ?? mockAdminsStore[idx].nickname,
+                email: body.email ?? mockAdminsStore[idx].email,
+                phone: body.phone ?? mockAdminsStore[idx].phone,
+              }
+            }
+            return ok(null, '更新成功')
+          } catch (e: any) {
+            console.warn('[mockAdminResponse] D1 update admin failed:', e?.message || e)
+          }
+        }
         const idx = mockAdminsStore.findIndex(a => a.id === id)
         if (idx >= 0) {
           mockAdminsStore[idx] = {
@@ -1057,6 +1264,16 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
         return ok(null, '更新成功')
       }
       if (method === 'DELETE') {
+        if (db) {
+          try {
+            await d1.d1DeleteAdmin(db, id)
+            const idx = mockAdminsStore.findIndex(a => a.id === id)
+            if (idx >= 0) mockAdminsStore[idx].status = 'deleted'
+            return ok(null, '删除成功')
+          } catch (e: any) {
+            console.warn('[mockAdminResponse] D1 delete admin failed:', e?.message || e)
+          }
+        }
         const idx = mockAdminsStore.findIndex(a => a.id === id)
         if (idx >= 0) mockAdminsStore[idx].status = 'deleted'
         return ok(null, '删除成功')
@@ -1068,14 +1285,40 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   }
 
   // ----- /permission -----
-  if (cleanPath === '/permission') return ok(mockAllPermissions())
+  if (cleanPath === '/permission') {
+    const db = d1.getD1(event)
+    if (db) {
+      try { return ok(await d1.d1AllPermissions(db)) } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 permissions failed:', e?.message || e)
+      }
+    }
+    return ok(mockAllPermissions())
+  }
   const permSub = cleanPath.match(/^\/permission\/(.+)$/)
   if (permSub) {
     const role = permSub[1]
-    if (method === 'GET') return ok(mockPermissionByRole(role))
+    const db = d1.getD1(event)
+    if (method === 'GET') {
+      if (db) {
+        try { return ok(await d1.d1PermissionByRole(db, role)) } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 permission by role failed:', e?.message || e)
+        }
+      }
+      return ok(mockPermissionByRole(role))
+    }
     if (method === 'PUT') {
       const body = getBody(event)
       const perms = Array.isArray(body.permissions) ? body.permissions : []
+      if (db) {
+        try {
+          await d1.d1UpdatePermission(db, role, perms)
+          rolePermissionsStore[role] = perms
+          const countRow = await db.prepare("SELECT COUNT(*) as c FROM Admin WHERE role = ? AND status != 'deleted'").bind(role).first()
+          return ok({ affectedAdminCount: countRow?.c || 0 }, '权限已更新')
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 update permission failed:', e?.message || e)
+        }
+      }
       rolePermissionsStore[role] = perms
       const affectedAdminCount = mockAdminsStore.filter(a => a.role === role && a.status !== 'deleted').length
       return ok({ affectedAdminCount }, '权限已更新')
@@ -1085,6 +1328,19 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
 
   // ----- /audit -----
   if (cleanPath === '/audit' || cleanPath === '/audit/violations') {
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        const r = await d1.d1AuditLogs(db, query)
+        const mapped = r.list.map((l: any) => ({
+          ...l,
+          user_id: l.adminId,
+        }))
+        return page(mapped, r.total, r.page, r.pageSize)
+      } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 audit logs failed:', e?.message || e)
+      }
+    }
     const r = mockAuditLogs(query)
     return page(r.list, r.total, r.page, r.pageSize)
   }
@@ -1154,7 +1410,32 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   }
 
   // ----- /auth/change-password -----
-  if (cleanPath === '/auth/change-password') return ok(null)
+  if (cleanPath === '/auth/change-password') {
+    if (method === 'POST') {
+      const authHeader = getRequestHeader(event, 'authorization') || ''
+      const token = authHeader.replace('Bearer ', '')
+      const match = token.match(/^mock-token-(\d+)-/)
+      const body = getBody(event)
+      if (match) {
+        const adminId = parseInt(match[1])
+        const db = d1.getD1(event)
+        if (db) {
+          try {
+            await d1.d1ResetPassword(db, adminId, body.newPassword || '123456')
+            const idx = mockAdminsStore.findIndex(a => a.id === adminId)
+            if (idx >= 0) mockAdminsStore[idx].password = sha256(body.newPassword || '123456')
+            return ok(null, '密码修改成功')
+          } catch (e: any) {
+            console.warn('[mockAdminResponse] D1 change password failed:', e?.message || e)
+          }
+        }
+        const idx = mockAdminsStore.findIndex(a => a.id === adminId)
+        if (idx >= 0) mockAdminsStore[idx].password = sha256(body.newPassword || '123456')
+        return ok(null, '密码修改成功')
+      }
+    }
+    return ok(null)
+  }
 
   // ----- /rsa -----
   if (cleanPath === '/rsa/status') return ok(mockRsaStatus())
@@ -1163,6 +1444,20 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // ----- /messages (用户个人消息) -----
   if (cleanPath === '/messages') {
     if (method === 'GET') {
+      const db = d1.getD1(event)
+      if (db) {
+        try {
+          // 从 token 解析 adminId
+          const authHeader = getRequestHeader(event, 'authorization') || ''
+          const token = authHeader.replace('Bearer ', '')
+          const match = token.match(/^mock-token-(\d+)-/)
+          const adminId = match ? parseInt(match[1]) : undefined
+          const r = await d1.d1Messages(db, query, adminId)
+          return page(r.list, r.total, r.page, r.pageSize)
+        } catch (e: any) {
+          console.warn('[mockAdminResponse] D1 messages failed:', e?.message || e)
+        }
+      }
       const r = mockMessagesList(query)
       return page(r.list, r.total, r.page, r.pageSize)
     }
@@ -1261,7 +1556,21 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   }
 
   // ----- /messages/unread-count -----
-  if (cleanPath === '/messages/unread-count') return ok(mockUnreadCount())
+  if (cleanPath === '/messages/unread-count') {
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        const authHeader = getRequestHeader(event, 'authorization') || ''
+        const token = authHeader.replace('Bearer ', '')
+        const match = token.match(/^mock-token-(\d+)-/)
+        const adminId = match ? parseInt(match[1]) : undefined
+        return ok(await d1.d1UnreadCount(db, adminId))
+      } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 unread count failed:', e?.message || e)
+      }
+    }
+    return ok(mockUnreadCount())
+  }
 
   // ----- /admin/expiry-check (GET) -----
   if (cleanPath === '/admin/expiry-check' && method === 'GET') {
@@ -1292,12 +1601,37 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   }
 
   // ----- /dashboard/stats -----
-  if (cleanPath === '/dashboard/stats') return ok(mockDashboardStats())
+  if (cleanPath === '/dashboard/stats') {
+    const db = d1.getD1(event)
+    if (db) {
+      try { return ok(await d1.d1DashboardStats(db)) } catch (e: any) {
+        console.warn('[mockAdminResponse] D1 dashboard stats failed:', e?.message || e)
+      }
+    }
+    return ok(mockDashboardStats())
+  }
 
   // ----- /articles (T2.5 后台稿件工作流) -----
+  // Helper: D1 文章列表查询
+  async function tryD1Articles(statusFilter?: string) {
+    const db = d1.getD1(event)
+    if (!db) return null
+    try {
+      const q: Record<string, any> = { ...query }
+      if (statusFilter) q.status = statusFilter
+      const r = await d1.d1Articles(db, q)
+      return page(r.list, r.total, r.page, r.pageSize)
+    } catch (e: any) {
+      console.warn('[mockAdminResponse] D1 articles query failed:', e?.message || e)
+      return null
+    }
+  }
+
   // 草稿列表
   if (cleanPath === '/articles/draft') {
     if (method === 'GET') {
+      const d1r = await tryD1Articles('draft')
+      if (d1r) return d1r
       const r = mockAdminArticlesList({ ...query, status: 'draft' })
       return page(r.list, r.total, r.page, r.pageSize)
     }
@@ -1306,6 +1640,8 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // 待审核列表
   if (cleanPath === '/articles/pending') {
     if (method === 'GET') {
+      const d1r = await tryD1Articles('pending_review')
+      if (d1r) return d1r
       const r = mockAdminArticlesList({ ...query, status: 'pending_review' })
       return page(r.list, r.total, r.page, r.pageSize)
     }
@@ -1314,6 +1650,8 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // 终审待审核列表
   if (cleanPath === '/articles/final-pending') {
     if (method === 'GET') {
+      const d1r = await tryD1Articles('final_pending')
+      if (d1r) return d1r
       const r = mockAdminArticlesList({ ...query, status: 'final_pending' })
       return page(r.list, r.total, r.page, r.pageSize)
     }
@@ -1322,6 +1660,8 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // 已发布列表
   if (cleanPath === '/articles/published') {
     if (method === 'GET') {
+      const d1r = await tryD1Articles('published')
+      if (d1r) return d1r
       const r = mockAdminArticlesList({ ...query, status: 'published' })
       return page(r.list, r.total, r.page, r.pageSize)
     }
@@ -1330,6 +1670,8 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // 已驳回列表
   if (cleanPath === '/articles/rejected') {
     if (method === 'GET') {
+      const d1r = await tryD1Articles('review_rejected')
+      if (d1r) return d1r
       const r = mockAdminArticlesList({ ...query, status: 'review_rejected' })
       return page(r.list, r.total, r.page, r.pageSize)
     }
@@ -1338,6 +1680,8 @@ export async function mockAdminResponse(method: string, backendPath: string, eve
   // 全部列表 (无状态过滤)
   if (cleanPath === '/articles') {
     if (method === 'GET') {
+      const d1r = await tryD1Articles()
+      if (d1r) return d1r
       const r = mockAdminArticlesList(query)
       return page(r.list, r.total, r.page, r.pageSize)
     }

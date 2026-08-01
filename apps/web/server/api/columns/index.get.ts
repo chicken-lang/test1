@@ -1,9 +1,10 @@
 // GET /api/columns - 栏目扁平列表（供 list/[slug].vue 查找当前栏目、侧边栏、面包屑）
-// 模式: 后端代理 (生产) / Mock (降级)
+// 模式: 后端代理 (生产) / D1 / Mock (降级)
 // V2.0: 返回扁平结构，含 linkUrl 字段（链接型栏目使用）
 // 向后兼容：同时返回 slug/title/parentId/order 等旧字段别名
 import { proxyPublicBackend } from '../../utils/backendProxy'
 import { mockColumns, applyMockStatusOverrides } from '../../utils/mock-api'
+import * as d1 from '../../utils/d1-queries'
 
 /**
  * 为后端返回的栏目数据添加旧字段别名
@@ -36,6 +37,18 @@ export default defineEventHandler(async (event) => {
     }
     return result
   } catch {
+    // 后端不可用 → 尝试 D1
+    const db = d1.getD1(event)
+    if (db) {
+      try {
+        const flatCols = await d1.d1ColumnsFlat(db)
+        if (flatCols.length > 0) {
+          return { code: 0, data: flatCols, message: 'ok (d1)' }
+        }
+      } catch (e: any) {
+        console.warn('[columns] D1 query failed:', e?.message || e)
+      }
+    }
     return { code: 0, data: mockColumns(), message: 'ok (mock)' }
   }
 })
