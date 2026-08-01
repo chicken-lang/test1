@@ -1,0 +1,906 @@
+// ========================================================================
+// 教务处后台管理系统 - Prisma Schema
+// 四级角色权限体系: 编辑管理员 / 审核管理员 / 栏目管理员 / 系统管理员
+// ========================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  engine   = "classic"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://jwc:123456@localhost:5432/jwc_dev?schema=public"
+}
+
+// ========== 管理员账号表 ==========
+model Admin {
+  id              Int      @id @default(autoincrement())
+  username        String   @unique
+  passwordHash    String   // bcrypt 哈希密文
+  nickname        String
+  role            String   // editor | reviewer | column_admin | system_admin
+  bindColumnIds   String   @default("[]") // JSON 数组字符串, 如 "[1,2,3]"
+  unionId         String?  // SSO union_id
+  email           String?
+  phone           String?
+  status          String   @default("active") // active | frozen | deleted
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联
+  adminTokens     AdminToken[]
+  auditLogs       AuditLog[]   @relation("AuditLogOperator")
+  ssoBinding      SsoUserBinding?
+  receivedMessages Message[]   @relation("MessageReceiver")
+
+  @@index([username])
+  @@index([role])
+  @@index([status])
+}
+
+// ========== Token 表(支持单点互斥 & 强制下线) ==========
+model AdminToken {
+  id          Int      @id @default(autoincrement())
+  adminId     Int
+  token       String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  revoked     Boolean  @default(false)
+
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([token])
+  @@index([adminId])
+}
+
+// ========== 审计日志表(不可删除/篡改, 链式哈希保障完整性) ==========
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  adminId     Int?
+  username    String?
+  role        String?
+  action      String   // login | logout | create_article | review | reject | ...
+  targetType  String?  // article | column | admin | token | ...
+  targetId    Int?
+  ip          String?
+  userAgent   String?
+  detail      String?  // JSON 详情
+  isViolation Boolean  @default(false) // 是否越权访问
+  hash        String?  // 当前记录的 SHA-256 哈希(链式完整性校验)
+  prevHash    String?  // 前一条记录的哈希(形成哈希链)
+  signature   String?  // HMAC-SHA256 数字签名(密钥保护,防止整链重算攻击)
+  createdAt   DateTime @default(now())
+
+  admin Admin? @relation("AuditLogOperator", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([isViolation])
+}
+
+// ========== 审计日志归档表(温数据: 90天~1年) ==========
+model AuditLogArchive {
+  id          Int      @id
+  adminId     Int?
+  username    String?
+  role        String?
+  action      String
+  targetType  String?
+  targetId    Int?
+  ip          String?
+  userAgent   String?
+  detail      String?
+  isViolation Boolean  @default(false)
+  hash        String?
+  prevHash    String?
+  signature   String?  // HMAC-SHA256 数字签名
+  createdAt   DateTime
+  archivedAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([archivedAt])
+}
+
+// ========== 归档批次记录(冷数据导出追踪) ==========
+model AuditArchiveBatch {
+  id            Int      @id @default(autoincrement())
+  batchNo       String   @unique // 归档批次号(如 20260801_030000)
+  migratedCount Int      @default(0) // 迁移至归档表的记录数
+  exportedCount Int      @default(0) // 导出至对象存储的记录数
+  storagePath   String?  // 冷数据存储路径
+  status        String   @default("completed") // running | completed | failed
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  operatorId    Int?  // 手动触发时的操作人ID(定时任务为null)
+
+  @@index([batchNo])
+  @@index([status])
+}
+
+// ========== 完整性校验历史记录(V2.0 §7.7) ==========
+model AuditIntegrityCheckLog {
+  id             Int      @id @default(autoincrement())
+  checkType      String   // manual | scheduled | on_read
+  scope          String   // main | archive | full
+  sampleMode     String   // full | sample
+  sampleSize     Int      @default(0)
+  verifiedCount  Int      @default(0)
+  totalCount     Int      @default(0)
+  issuesCount    Int      @default(0)
+  integrity      String   // pass | fail
+  issues         Json?    // 问题详情(最多50条)
+  elapsedMs      Int      @default(0)
+  triggeredBy    String?  // 触发人(adminId 或 system)
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([integrity])
+}
+
+// ========== 篡改告警记录 ==========
+model AuditTamperAlert {
+  id          Int      @id @default(autoincrement())
+  checkLogId  Int?
+  logId       Int?     // 被篡改的日志ID
+  alertType   String   // hash_mismatch | chain_broken | missing_hash
+  severity    String   @default("high") // high | critical
+  message     String
+  status      String   @default("open") // open | acknowledged | resolved
+  createdAt   DateTime @default(now())
+  handledAt   DateTime?
+  handledBy   Int?
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ========== 栏目表 ==========
+model Column {
+  id                 Int      @id @default(autoincrement())
+  parentId           Int?     // 父栏目 ID; 一级栏目为 null
+  columnName         String
+  columnSlug         String   @unique
+  responsibleBusiness String?
+  sortOrder          Int      @default(0)
+  status             String   @default("ACTIVE") // ACTIVE | DISABLED
+  description        String?
+  version            Int      @default(0) // 乐观锁版本号
+  visibility         String   @default("PUBLIC") // PUBLIC | CAMPUS | INTERNAL
+  linkUrl            String?  // 外部链接地址（仅链接型栏目使用，如人才培养平台下的系统入口）
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // 关联
+  parent             Column?  @relation("ColumnParent", fields: [parentId], references: [id])
+  children           Column[] @relation("ColumnParent")
+  articles           Article[]
+  guideItems         GuideItem[]
+  disclosureItems    DisclosureItem[] @relation("DisclosureColumn")
+
+  @@index([parentId])
+  @@index([columnSlug])
+  @@index([status])
+  @@index([responsibleBusiness])
+  @@index([visibility])
+}
+
+// ========== 稿件表 ==========
+model Article {
+  id              Int      @id @default(autoincrement())
+  columnId        Int
+  articleSlug     String   @unique
+  title           String
+  content         String?
+  encryptedContent String?  // RSA 加密后的密文内容（涉密公文）
+  summary         String?
+  coverImageUrl   String?   // 列表封面图, CDN 地址
+  source          String?   // 文章来源/作者署名, 如 "教务处"
+  responsibleBusiness String? // 业务分类: academic-affairs | exam-management | ...
+  authorId        Int      // 撰稿编辑 ID
+  type            String   // normal | confidential
+  secretLevel     String   @default("normal") // normal | confidential
+  status          String   @default("draft")
+  // draft | pending_review | review_rejected | final_pending | published | withdrawn
+  visibility      String   @default("PUBLIC") // PUBLIC | CAMPUS | INTERNAL
+  businessTags    String   @default("[]") // JSON 数组
+  roleTags        String   @default("[]")
+  timeTags        String   @default("[]")
+  reviewerId      Int?     // 初审审核人 ID
+  reviewComment   String?  // 初审审核批注
+  reviewedAt      DateTime?
+  finalReviewerId Int?     // 终审人 ID
+  finalReviewComment String? // 终审批注
+  finalReviewedAt DateTime?
+  rejectCount     Int      @default(0) // 驳回次数
+  isTop           Boolean  @default(false)
+  pinLevel        String?  // column_top | site_top
+  pinExpireAt     DateTime?
+  isRecommended   Boolean  @default(false)
+  viewCount       Int      @default(0)
+  submittedAt     DateTime?
+  publishedAt     DateTime?
+  scheduledPublishAt DateTime? // 定时发布时间
+  // 时效标签自动归档（模块十九）
+  timeLabel       String?  // LONG_TERM | SEMESTER | INSTANT
+  expireDate      DateTime? // 即时办理类稿件的过期日期
+  archiveReminded Boolean  @default(false) // 是否已发送到期提醒
+  archivedAt      DateTime? // 归档时间
+  deletedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联
+  column          Column   @relation(fields: [columnId], references: [id])
+  attachments     Attachment[]
+  carouselItems   HomepageCarousel[]
+  favorites       Favorite[]
+  histories       History[]
+  archiveLogs     ArticleArchiveLog[]
+
+  @@index([columnId])
+  @@index([authorId])
+  @@index([status])
+  @@index([type])
+  @@index([secretLevel])
+  @@index([visibility])
+  @@index([articleSlug])
+  @@index([status, publishedAt])
+  @@index([columnId, status, publishedAt])
+  @@index([responsibleBusiness])
+  @@index([timeLabel])
+  @@index([expireDate])
+}
+
+// ========== 稿件归档日志表 (模块十九) ==========
+model ArticleArchiveLog {
+  id              Int      @id @default(autoincrement())
+  articleId       Int      // 归档稿件 ID
+  columnId        Int      // 归档时所属栏目
+  title           String   // 归档时稿件标题（快照）
+  archiveType     String   // AUTO_SEMESTER | AUTO_EXPIRY | MANUAL
+  operatorId      Int?     // 操作人 ID（自动归档为 null）
+  operatorName    String?  // 操作人姓名
+  originalStatus  String   // 归档前状态
+  archiveDate     DateTime @default(now()) // 归档日期
+  expireDate      DateTime? // 稿件原到期日期
+  timeLabel       String?  // 时效标签
+  createdAt       DateTime @default(now())
+
+  article         Article  @relation(fields: [articleId], references: [id])
+
+  @@index([articleId])
+  @@index([columnId])
+  @@index([archiveType])
+  @@index([archiveDate])
+}
+
+// ========== 站内消息表 (V2.0) ==========
+model Message {
+  id              Int      @id @default(autoincrement())
+  type            String   // system | notice | feedback | approval-todo
+  title           String
+  content         String
+  senderId        Int?     // 发送人 admin ID (系统自动产生时可为空)
+  receiverId      Int?     // 接收人 admin ID (单条消息场景)
+  receiver        Admin?   @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiverRole    String?  // 按角色批量下发时的目标角色 (super_admin | dept_admin | editor | viewer)
+  receiverDeptId  Int?     // 按部门下发时的目标部门ID
+  bizType         String?  // 关联业务类型 (manuscript | feedback | inquiry)
+  bizId           Int?     // 关联业务记录ID
+  articleId       Int?     // 关联稿件 ID (兼容旧字段)
+  action          String?  // 触发动作: submit | approve | reject | final_approve | final_reject | withdraw
+  actorId         Int?     // 操作人 admin ID
+  priority        String   @default("normal") // normal | high | urgent
+  isRead          Boolean  @default(false)
+  readAt          DateTime?
+  isArchived      Boolean  @default(false)
+  isDeleted       Boolean  @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([receiverId])
+  @@index([type])
+  @@index([isRead])
+  @@index([articleId])
+  @@index([receiverRole])
+  @@index([bizType])
+  @@index([bizId])
+  @@index([priority])
+  @@index([isDeleted])
+}
+
+// ========== 角色权限模板表 ==========
+model RolePermission {
+  id              Int      @id @default(autoincrement())
+  role            String   @unique // editor | reviewer | column_admin | system_admin
+  roleName        String
+  permissions     String   // JSON 数组, 如 ["article.create","article.draft",...]
+  description     String?
+  updatedAt       DateTime @updatedAt
+
+  @@index([role])
+}
+
+// ========== 附件表 ==========
+model Attachment {
+  id          Int      @id @default(autoincrement())
+  articleId   Int?
+  name        String
+  fileUrl     String
+  fileSize    Int
+  fileType    String
+  downloadCount Int    @default(0)
+  createdAt   DateTime @default(now())
+
+  // 关联
+  article     Article? @relation(fields: [articleId], references: [id])
+
+  @@index([articleId])
+}
+
+// ========== 敏感词表(V2.0标准) ==========
+model SensitiveWord {
+  id           Int      @id @default(autoincrement())
+  word         String   @unique
+  level        String   // LOW | HIGH
+  category     String   // 分类: political | pornographic | violent | advertising | other
+  replacement  String   @default("***") // 替换文本
+  isActive     Boolean  @default(true) // 是否启用
+  createdBy    Int?     // 创建人 admin ID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([level])
+  @@index([category])
+  @@index([isActive])
+  @@index([word])
+}
+
+// ========== 风控日志表(V2.0标准) ==========
+model RiskControlLog {
+  id              Int      @id @default(autoincrement())
+  sourceType      String   // VISITOR_SUBMIT | ADMIN_SUBMIT | COMMENT | ANNOUNCEMENT | FILE_UPLOAD
+  userId          Int?     // 操作人 admin ID(匿名访客为 null)
+  ipAddress       String?  // 操作 IP
+  contentSnapshot String?  // 原始内容快照(加密存储)
+  matchedWords    String?  // 命中的敏感词列表(JSON)
+  action          String   // PASS | DESENSITIZED | BLOCKED
+  articleId       Int?     // 关联稿件 ID
+  createdAt       DateTime @default(now())
+
+  @@index([sourceType])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([articleId])
+}
+
+// ========== RSA 密钥对表（登录加密传输） ==========
+model SysRsaKey {
+  id              Int      @id @default(autoincrement())
+  version         String   @unique // 密钥版本标识, 如 "v1", "v2"
+  publicKey       String   // PEM 格式公钥（明文存储，可公开分发）
+  privateKeyEnc   String   // PEM 格式私钥（AES-256-GCM 加密后存储）
+  keyIv           String   // AES 加密 IV（hex）
+  keyAuthTag      String   // AES-GCM 认证标签（hex）
+  isActive        Boolean  @default(true) // 是否为当前活跃密钥
+  createdAt       DateTime @default(now())
+  createdBy       String?  // 生成操作人
+
+  @@index([isActive])
+}
+
+// ========== 文件资源表（V2.0 模块十：文件资源管理） ==========
+model FileResource {
+  id              Int      @id @default(autoincrement())
+  fileName        String   @map("file_name")
+  storagePath     String   @map("storage_path")
+  fileSize        Int      @map("file_size")
+  fileFormat      String   @map("file_format")
+  mimeType        String   @map("mime_type")
+  columnId        Int?     @map("column_id")
+  articleId       Int?     @map("article_id")
+  category        String?  // 下载中心分类: notice | material | template | ...
+  uploaderId      Int      @map("uploader_id")
+  accessLevel     String   @default("PUBLIC") @map("access_level") // PUBLIC | CAMPUS | INTERNAL
+  secretLevel     String   @default("NORMAL") @map("secret_level") // NORMAL | CONFIDENTIAL
+  internalTags    String?  @map("internal_tags") // JSON 数组, 后台私有标签
+  riskNote        String?  @map("risk_note")
+  downloadCount   Int      @default(0) @map("download_count")
+  previewCount    Int      @default(0) @map("preview_count")
+  status          String   @default("ACTIVE") // ACTIVE | ARCHIVED | DELETED
+  previewEnabled  Boolean  @default(true) @map("preview_enabled")
+  previewCacheKey String?  @map("preview_cache_key")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联
+  carouselItems   HomepageCarousel[]
+
+  @@index([columnId])
+  @@index([articleId])
+  @@index([uploaderId])
+  @@index([accessLevel])
+  @@index([secretLevel])
+  @@index([status])
+  @@index([fileFormat])
+  @@index([category])
+}
+
+// ========== 搜索热词统计表 (V2.0 模块十五: 全文检索) ==========
+model StatSearchKeyword {
+  id            Int      @id @default(autoincrement())
+  keyword       String
+  statDate      DateTime @map("stat_date")
+  searchCount   Int      @default(0) @map("search_count")
+  resultCount   Int      @default(0) @map("result_count")
+  userType      String   @default("anonymous") @map("user_type") // anonymous | sso | admin
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([keyword, statDate])
+  @@index([statDate])
+  @@index([searchCount])
+}
+
+// ========== 留言咨询表 (V2.0 模块十三: 留言咨询完整业务流) ==========
+model Inquiry {
+  id                Int      @id @default(autoincrement())
+  inquiryNo         String   @unique @map("inquiry_no")
+  title             String
+  content           String
+  businessTag       String   @map("business_tag")
+  submitterName     String   @map("submitter_name")
+  submitterContact  String   @map("submitter_contact")
+  submitterType     String   @map("submitter_type") // student | teacher | visitor
+  submitterUserId   Int?     @map("submitter_user_id") // SSO登录用户关联，访客为 null
+  assigneeId        Int?     @map("assignee_id") // 指定处理人 ID
+  assigneeDeptId    Int?     @map("assignee_dept_id") // 指定处理部门 ID
+  status            String   @default("pending") // pending | processing | replied | closed
+  replyContent      String?  @map("reply_content")
+  replyBy           Int?     @map("reply_by") // 答复人 admin ID
+  replyAt           DateTime? @map("reply_at")
+  isPublic          Boolean  @default(false) @map("is_public")
+  deadlineAt        DateTime @map("deadline_at")
+  isTimeout         Boolean  @default(false) @map("is_timeout")
+  warningSent       Boolean  @default(false) @map("warning_sent")
+  ipAddress         String?  @map("ip_address")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([businessTag])
+  @@index([assigneeId])
+  @@index([submitterType])
+  @@index([isTimeout])
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+// ========== 咨询分流配置表 (V2.0 模块十三) ==========
+model InquiryRoutingConfig {
+  id              Int      @id @default(autoincrement())
+  businessTag     String   @unique @map("business_tag")
+  assigneeId      Int?     @map("assignee_id") // 指定处理人 ID
+  assigneeDeptId  Int?     @map("assignee_dept_id") // 指定处理部门 ID
+  timeoutHours    Int      @default(72) @map("timeout_hours")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([businessTag])
+}
+
+// ========== SSO用户表 (V2.0 模块三: 统一身份认证SSO对接) ==========
+// 学生、教师通过SSO登录后自动创建的用户记录，无需本地账户
+model User {
+  id              Int      @id @default(autoincrement())
+  unionId         String   @unique @map("union_id") // SSO平台UnionID
+  ssoUserType     String   @map("sso_user_type") // student | teacher | staff
+  name            String   @map("name") // SSO平台返回姓名
+  department      String?  @map("department") // SSO平台返回院系/部门
+  email           String?  @map("email")
+  phone           String?  @map("phone")
+  status          String   @default("active") // active | frozen | deleted
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // 反向关联
+  favorites    Favorite[]
+  histories    History[]
+  subscriptions Subscription[]
+
+  @@index([unionId])
+  @@index([ssoUserType])
+  @@index([status])
+  @@index([email])
+}
+
+// ========== 用户收藏表 (V2.0 模块六: 用户中心) ==========
+model Favorite {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id") // SSO用户ID (user表)
+  articleId   Int      @map("article_id") // 文章ID
+  articleSlug String   @map("article_slug") // 文章slug (用于前端路由)
+  title       String   // 文章标题快照
+  coverImage  String?  @map("cover_image") // 封面图快照
+  columnSlug  String?  @map("column_slug") // 栏目slug快照
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId])
+  @@index([articleId])
+  @@index([createdAt])
+}
+
+// ========== 浏览历史表 (V2.0 模块六: 用户中心) ==========
+model History {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id") // SSO用户ID (user表)
+  articleId   Int      @map("article_id") // 文章ID
+  articleSlug String   @map("article_slug") // 文章slug
+  title       String   // 文章标题快照
+  columnSlug  String?  @map("column_slug") // 栏目slug
+  viewCount   Int      @default(1) @map("view_count") // 本次浏览计数
+  lastViewedAt DateTime @default(now()) @map("last_viewed_at") // 最后浏览时间
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId])
+  @@index([articleId])
+  @@index([lastViewedAt])
+}
+
+// ========== 用户订阅表 (V2.0 模块六: 用户中心) ==========
+model Subscription {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id") // SSO用户ID (user表)
+  targetType  String   @map("target_type") // column | author | keyword
+  targetId    String   @map("target_id") // 订阅目标ID/slug (栏目slug/作者ID/关键词)
+  targetName  String   @map("target_name") // 订阅目标名称快照
+  isEnabled   Boolean  @default(true) @map("is_enabled") // 是否启用
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([userId])
+  @@index([targetType])
+  @@index([isEnabled])
+}
+
+// ========== SSO用户绑定关系表 (V2.0 模块三: 统一身份认证SSO对接) ==========
+// 仅用于管理员账号与SSO的绑定（学生/教师直接使用User表，无需绑定）
+model SsoUserBinding {
+  id             Int      @id @default(autoincrement())
+  adminId        Int      @map("admin_id") // 管理员ID (admin表)
+  unionId        String   @map("union_id") // SSO平台UnionID
+  ssoUserType    String   @map("sso_user_type") // student | teacher | staff
+  ssoName        String?  @map("sso_name") // SSO平台返回姓名
+  ssoDepartment  String?  @map("sso_department") // SSO平台返回院系/部门
+  bindTime       DateTime @default(now()) @map("bind_time") // 绑定时间
+  bindSource     String   @map("bind_source") // AUTO | MANUAL
+  status         Int      @default(1) // 1-正常 0-解绑
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([unionId])
+  @@unique([adminId])
+  @@index([adminId])
+  @@index([unionId])
+  @@index([ssoUserType])
+  @@index([status])
+}
+
+// ========== SSO参数配置表 (V2.0 模块三) ==========
+model SsoConfig {
+  id            Int      @id @default(autoincrement())
+  configKey     String   @unique @map("config_key") // 配置键
+  configValue   String   @map("config_value") // 配置值
+  configType    String   @default("STRING") @map("config_type") // STRING | SECRET | URL | NUMBER
+  description   String?  // 配置说明
+  isEncrypted   Boolean  @default(false) @map("is_encrypted") // 是否加密存储
+  updatedBy     Int?     @map("updated_by") // 最后修改人
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([configKey])
+}
+
+// ========== 统计分析中心 - 原始事件数据表 (V2.0 模块十二) ==========
+model StatRawEvent {
+  id             Int      @id @default(autoincrement())
+  eventType      String   @map("event_type") // page_view | file_download | search | article_view
+  userId         Int?     @map("user_id") // 用户ID（匿名访客为 NULL）
+  sessionId      String?  @map("session_id") // 会话标识（用于UV去重）
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  columnId       Int?     @map("column_id")
+  articleId      Int?     @map("article_id")
+  attachmentId   Int?     @map("attachment_id")
+  searchKeyword  String?  @map("search_keyword")
+  referer        String?  @map("referer")
+  deviceType     String?  @map("device_type") // pc | mobile | tablet
+  eventTime      DateTime @map("event_time")
+  createdAt      DateTime @default(now())
+
+  @@index([eventType])
+  @@index([columnId])
+  @@index([articleId])
+  @@index([eventTime])
+  @@index([sessionId])
+}
+
+// ========== 统计分析中心 - 栏目访问量统计表 (V2.0 模块十二) ==========
+model StatColumnAccess {
+  id         Int      @id @default(autoincrement())
+  columnId   Int      @map("column_id")
+  statDate   DateTime @map("stat_date")
+  statHour   Int?     @map("stat_hour") // 统计小时（0-23）
+  pvCount    Int      @default(0) @map("pv_count")
+  uvCount    Int      @default(0) @map("uv_count")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([columnId, statDate, statHour])
+  @@index([columnId])
+  @@index([statDate])
+}
+
+// ========== 统计分析中心 - 稿件浏览量排行表 (V2.0 模块十二) ==========
+model StatArticleRank {
+  id              Int      @id @default(autoincrement())
+  articleId       Int      @map("article_id")
+  columnId        Int      @map("column_id")
+  title           String
+  statDate        DateTime @map("stat_date")
+  viewCount       Int      @default(0) @map("view_count")
+  uniqueViewers   Int      @default(0) @map("unique_viewers")
+  totalViewCount  Int      @default(0) @map("total_view_count")
+  publishedAt     DateTime @map("published_at")
+
+  @@unique([articleId, statDate])
+  @@index([articleId])
+  @@index([columnId])
+  @@index([statDate])
+  @@index([viewCount])
+}
+
+// ========== 统计分析中心 - 文件下载排行表 (V2.0 模块十二) ==========
+model StatAttachmentDownload {
+  id                 Int      @id @default(autoincrement())
+  attachmentId       Int      @map("attachment_id")
+  articleId          Int?     @map("article_id")
+  columnId           Int?     @map("column_id")
+  fileName           String   @map("file_name")
+  fileType           String   @map("file_type")
+  statDate           DateTime @map("stat_date")
+  downloadCount      Int      @default(0) @map("download_count")
+  totalDownloadCount Int      @default(0) @map("total_download_count")
+
+  @@unique([attachmentId, statDate])
+  @@index([attachmentId])
+  @@index([columnId])
+  @@index([statDate])
+  @@index([downloadCount])
+}
+
+// ========== 首页轮播图配置表 (V2.0 模块十七: 首页轮播约束) ==========
+model HomepageCarousel {
+  id              Int      @id @default(autoincrement())
+  positionCode    String   @map("position_code") // CAROUSEL_A | CAROUSEL_B | ...
+  articleId       Int      @map("article_id")
+  sortOrder       Int      @map("sort_order")
+  coverImageId    Int?     @map("cover_image_id") // 文件资源ID
+  status          String   @default("ACTIVE") // ACTIVE | INACTIVE
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联
+  article         Article  @relation(fields: [articleId], references: [id])
+  coverImage      FileResource? @relation(fields: [coverImageId], references: [id])
+
+  @@unique([positionCode, articleId])
+  @@index([positionCode])
+  @@index([sortOrder])
+  @@index([status])
+}
+
+// ========== 办事指南事项表 (V2.0 模块十四: 办事指南完整建模) ==========
+model GuideItem {
+  id                  Int      @id @default(autoincrement())
+  title               String   @map("title")
+  slug                String   @unique @map("slug")
+  targetAudience      String   @map("target_audience") // student | teacher | visitor
+  businessTag         String   @map("business_tag")
+  targetObject        String   @map("target_object") // JSON: { categories: [{ name, description }] }
+  processSteps        String   @map("process_steps") // JSON: [{ step, name, description }]
+  requiredMaterials   String   @map("required_materials") // JSON: [{ name, description, required }]
+  timeLimit           String   @map("time_limit")
+  timeLimitDays       Int?     @map("time_limit_days")
+  contactDept         String   @map("contact_dept")
+  contactPhone        String?  @map("contact_phone")
+  contactAddress      String?  @map("contact_address")
+  contactEmail        String?  @map("contact_email")
+  relatedAttachments  String   @default("[]") @map("related_attachments") // JSON: [attachmentId1, attachmentId2, ...]
+  hallCode            String?  @unique @map("hall_code")
+  hallLink            String?  @map("hall_link")
+  contactPersonId     Int?     @map("contact_person_id")
+  columnId            Int?     @map("column_id")
+  sortOrder           Int      @default(0) @map("sort_order")
+  status              String   @default("draft") // draft | published | offline
+  viewCount           Int      @default(0) @map("view_count")
+  createdBy           Int      @map("created_by")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+
+  // 关联
+  column              Column?  @relation(fields: [columnId], references: [id])
+
+  @@index([slug])
+  @@index([targetAudience])
+  @@index([businessTag])
+  @@index([status])
+  @@index([columnId])
+  @@index([sortOrder])
+  @@index([createdBy])
+  @@index([targetAudience, businessTag, status]) // 双维度复合索引：角色+业务标签+状态
+}
+
+// ========== 信息公开目录条目 (V2.0 §9.3.9 + 《高等学校信息公开办法》) ==========
+model DisclosureItem {
+  id                  Int       @id @default(autoincrement())
+  title               String    @db.VarChar(100)
+  slug                String    @unique @db.VarChar(64)
+  category            String    @db.VarChar(32) // BASIC/REGULATION/PLAN/FINANCE/ADMISSION/PERSONNEL/TEACHING/STUDENT/OTHER
+  legalBasis          String?   @db.VarChar(200) // 公开依据（合规字段）
+  disclosureDeadline  String?   @db.VarChar(100) // 公开时限（合规字段）
+  disclosureMethod    String?   @db.VarChar(100) // 公开方式（合规字段）
+  summary             String?   @db.VarChar(200) // 摘要（匿名访客可见）
+  content             String?   @db.Text // 详细内容（仅 SSO 师生可见）
+  linkUrl             String?   @db.VarChar(500) // 外部链接
+  columnId            Int?      // 关联栏目（与全站栏目管理模块联动）
+  column              Column?   @relation("DisclosureColumn", fields: [columnId], references: [id])
+  visibility          String    @default("PUBLIC") @db.VarChar(16) // PUBLIC/CAMPUS/INTERNAL
+  status              String    @default("DRAFT") @db.VarChar(16) // DRAFT/PUBLISHED/OFFLINE
+  sortOrder           Int       @default(0)
+  createdBy           Int?      // 创建管理员 ID
+  updatedBy           Int?      // 最近更新管理员 ID
+  deletedAt           DateTime? // 逻辑删除标记
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([category])
+  @@index([visibility])
+  @@index([status])
+  @@index([sortOrder])
+  @@index([columnId])
+  @@index([deletedAt])
+}
+
+// ========== 问卷主表 (V2.0 模块二十: 问卷调查) ==========
+model Survey {
+  id              Int      @id @default(autoincrement())
+  title           String   @map("title")
+  description     String?  @map("description")
+  surveyType      String   @default("GENERAL") @map("survey_type") // GENERAL | COURSE_EVAL | FEEDBACK | CUSTOM
+  status          String   @default("DRAFT") @map("status") // DRAFT | PUBLISHED | CLOSED | ARCHIVED
+  templateId      Int?     @map("template_id")
+  isAnonymous     Boolean  @default(false) @map("is_anonymous")
+  allowSave       Boolean  @default(true) @map("allow_save")
+  maxSubmit       Int      @default(1) @map("max_submit")
+  startTime       DateTime? @map("start_time")
+  endTime         DateTime? @map("end_time")
+  coverImage      String?  @map("cover_image")
+  createdBy       Int      @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  questions       SurveyQuestion[]
+  distributions   SurveyDistribution[]
+  responses       SurveyResponse[]
+
+  @@index([status])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@index([surveyType])
+}
+
+// ========== 问卷题目表 (V2.0 模块二十) ==========
+model SurveyQuestion {
+  id              Int      @id @default(autoincrement())
+  surveyId        Int      @map("survey_id")
+  questionType    String   @map("question_type") // RADIO | CHECKBOX | TEXT | TEXTAREA | RATING | MATRIX | DATE | UPLOAD
+  title           String   @map("title")
+  description     String?  @map("description")
+  sortOrder       Int      @default(0) @map("sort_order")
+  isRequired      Boolean  @default(true) @map("is_required")
+  options         String?  @map("options") // JSON: [{label, value}]
+  ratingMax       Int      @default(5) @map("rating_max")
+  matrixRows      String?  @map("matrix_rows") // JSON array
+  matrixColumns   String?  @map("matrix_columns") // JSON array
+  logicRules      String?  @map("logic_rules") // JSON
+  validationRules String?  @map("validation_rules") // JSON
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  survey          Survey   @relation(fields: [surveyId], references: [id])
+  answers         SurveyAnswer[]
+
+  @@index([surveyId])
+  @@index([surveyId, sortOrder])
+}
+
+// ========== 问卷发布范围表 (V2.0 模块二十) ==========
+model SurveyDistribution {
+  id              Int      @id @default(autoincrement())
+  surveyId        Int      @map("survey_id")
+  targetType      String   @map("target_type") // ALL | ROLE | DEPARTMENT | CLASS | USER | LINK
+  targetId        String?  @map("target_id") // 目标ID，逗号分隔
+  shareLink       String?  @map("share_link")
+  accessCode      String?  @map("access_code")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  survey          Survey   @relation(fields: [surveyId], references: [id])
+
+  @@index([surveyId])
+}
+
+// ========== 问卷答卷表 (V2.0 模块二十) ==========
+model SurveyResponse {
+  id              Int      @id @default(autoincrement())
+  surveyId        Int      @map("survey_id")
+  respondentId    Int?     @map("respondent_id")
+  respondentName  String?  @map("respondent_name")
+  respondentIp    String?  @map("respondent_ip")
+  submitTime      DateTime @default(now()) @map("submit_time")
+  durationSeconds Int?     @map("duration_seconds")
+  status          String   @default("SUBMITTED") @map("status") // DRAFT | SUBMITTED
+
+  survey          Survey   @relation(fields: [surveyId], references: [id])
+  answers         SurveyAnswer[]
+
+  @@index([surveyId])
+  @@index([respondentId])
+  @@index([submitTime])
+}
+
+// ========== 问卷答案表 (V2.0 模块二十) ==========
+model SurveyAnswer {
+  id              Int      @id @default(autoincrement())
+  responseId      Int      @map("response_id")
+  questionId      Int      @map("question_id")
+  answerValue     String?  @map("answer_value")
+  answerJson      String?  @map("answer_json") // JSON
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  response        SurveyResponse @relation(fields: [responseId], references: [id])
+  question        SurveyQuestion @relation(fields: [questionId], references: [id])
+
+  @@index([responseId])
+  @@index([questionId])
+}
+
+// ========== 问卷模板表 (V2.0 模块二十) ==========
+model SurveyTemplate {
+  id              Int      @id @default(autoincrement())
+  name            String   @map("name")
+  description     String?  @map("description")
+  templateType    String   @map("template_type") // COURSE_EVAL | FEEDBACK | GENERAL
+  questionsJson   String   @map("questions_json") // JSON
+  isSystem        Boolean  @default(false) @map("is_system")
+  createdBy       Int?     @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([templateType])
+}

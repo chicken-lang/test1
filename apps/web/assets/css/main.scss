@@ -1,6 +1,7 @@
 // ====================================================================
-// 全局样式 v2.0 - 教务处用户端
-// 移除适老化, 聚焦教师/学生群体的商业级视觉
+// 全局样式 v5.0(VI 合规版) - 教务处用户端
+// VI 合规 · 公文规范 · 视觉延续 · 克制装饰
+// 详见 docs/前端优化方案-VI规范化-v5.md
 // ====================================================================
 @use './variables.scss' as *;
 
@@ -54,6 +55,33 @@ button {
   cursor: pointer;
 }
 
+// ========== 全局焦点态(无障碍:键盘可见 VI 主色描边) ==========
+:focus-visible {
+  outline: 2px solid $focus-ring;
+  outline-offset: 2px;
+}
+
+// 链接/按钮焦点态增强
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid $focus-ring;
+  outline-offset: 2px;
+  border-radius: $radius-sm;
+}
+
+// ========== 动效降级(尊重用户偏好) ==========
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 // ========== 通用工具类 ==========
 .container {
   @include container;
@@ -72,7 +100,7 @@ button {
   color: $primary;
 }
 .text-gold {
-  color: $gold;
+  color: $primary;
 }
 .text-danger {
   color: $danger;
@@ -96,8 +124,11 @@ button {
 .font-serif {
   font-family: $font-serif;
 }
+.font-mono {
+  font-family: $font-mono;
+}
 
-// ========== 区块标题通用组件 ==========
+// ========== 区块标题通用组件(中英文对照 + VI 主色装饰线) ==========
 .section-header {
   display: flex;
   align-items: flex-end;
@@ -127,7 +158,7 @@ button {
         transform: translateY(-50%);
         width: 4px;
         height: 70%;
-        background: $grad-gold;
+        background: $primary;
         border-radius: $radius-pill;
       }
     }
@@ -157,18 +188,93 @@ button {
   }
 }
 
-// ========== 页面过渡 ==========
-.page-enter-active,
-.page-leave-active {
+// ========== 页面过渡(配合 nuxt.config app.pageTransition) ==========
+.page-enter-active {
   transition:
-    opacity 0.25s,
-    transform 0.25s;
+    opacity 0.25s $ease-in-out-circ,
+    transform 0.25s $ease-in-out-circ;
 }
 
-.page-enter-from,
-.page-leave-to {
+.page-leave-active {
+  transition:
+    opacity 0.15s $ease-in-out-circ,
+    transform 0.15s $ease-in-out-circ;
+}
+
+.page-enter-from {
   opacity: 0;
   transform: translateY(8px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+// 布局过渡
+.layout-enter-active,
+.layout-leave-active {
+  transition: opacity 0.2s $ease-in-out-circ;
+}
+
+.layout-enter-from,
+.layout-leave-to {
+  opacity: 0;
+}
+
+// ========== 滚动揭示动画(配合 v-reveal 指令) ==========
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.5s $ease-out-expo,
+    transform 0.5s $ease-out-expo;
+
+  &.is-revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 交错延迟工具类
+.reveal-delay-1 {
+  transition-delay: 0.05s;
+}
+.reveal-delay-2 {
+  transition-delay: 0.1s;
+}
+.reveal-delay-3 {
+  transition-delay: 0.15s;
+}
+.reveal-delay-4 {
+  transition-delay: 0.2s;
+}
+.reveal-delay-5 {
+  transition-delay: 0.25s;
+}
+
+// ========== 骨架屏(加载占位) ==========
+.skeleton {
+  // 豁免说明:skeleton shimmer 动画功能性渐变(必需),非品牌色渐变
+  // 用于加载占位的扫光效果,尊重 prefers-reduced-motion 自动降级
+  background: linear-gradient(
+    90deg,
+    $bg-soft 0%,
+    $border-lighter 50%,
+    $bg-soft 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+  border-radius: $radius-base;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 // ========== 滚动条美化(精致) ==========
@@ -193,7 +299,7 @@ button {
 
 // ========== 选中文本 ==========
 ::selection {
-  background: rgba(0, 91, 172, 0.15);
+  background: rgba(0, 115, 189, 0.15); // VI 主色 #0073BD 半透明
   color: $primary-dark;
 }
 
@@ -205,8 +311,9 @@ button {
   background: $primary;
   color: #fff;
   padding: $space-2 $space-4;
-  z-index: 9999;
+  z-index: $z-skip-link;
   border-radius: 0 0 $radius-base 0;
+  transition: top $transition-fast;
 
   &:focus {
     top: 0;
@@ -214,7 +321,9 @@ button {
   }
 }
 
-// ========== Element Plus 全局微调 ==========
+// ========== Element Plus 全局微调(品牌化) ==========
+
+// 主按钮
 .el-button--primary {
   --el-button-bg-color: #{$primary};
   --el-button-border-color: #{$primary};
@@ -224,14 +333,123 @@ button {
   --el-button-active-border-color: #{$primary-dark};
 }
 
-// Element Plus 卡片圆角统一
+// 卡片
 .el-card {
   border-radius: $radius-lg;
   border-color: $border-lighter;
 }
 
-// Element Plus 标签圆角
+// 标签
 .el-tag {
   border-radius: $radius-sm;
   font-weight: $fw-medium;
+}
+
+// 输入框
+.el-input__wrapper {
+  border-radius: $radius-base;
+
+  &.is-focus {
+    box-shadow: 0 0 0 1px $primary inset, 0 0 0 3px rgba(0, 115, 189, 0.15) inset;
+  }
+}
+
+// 对话框
+.el-dialog {
+  border-radius: $radius-xl;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid $border-lighter;
+  margin-right: 0;
+  padding: $space-5 $space-6;
+}
+
+.el-dialog__body {
+  padding: $space-6;
+}
+
+.el-dialog__footer {
+  border-top: 1px solid $border-lighter;
+  padding: $space-4 $space-6;
+}
+
+// 分页(VI 主色 active)
+.el-pagination {
+  .el-pager li {
+    border-radius: $radius-base;
+    font-weight: $fw-medium;
+
+    &:hover {
+      color: $primary;
+    }
+
+    &.is-active {
+      background: $primary;
+      color: #fff;
+    }
+  }
+
+  .btn-prev,
+  .btn-next {
+    border-radius: $radius-base;
+
+    &:hover {
+      color: $primary;
+    }
+  }
+}
+
+// 面包屑
+.el-breadcrumb {
+  font-size: $fs-sm;
+
+  .el-breadcrumb__item {
+    .el-breadcrumb__inner {
+      color: $text-secondary;
+
+      &.is-link:hover {
+        color: $primary;
+      }
+    }
+
+    &:last-child .el-breadcrumb__inner {
+      color: $primary-dark;
+      font-weight: $fw-medium;
+    }
+  }
+}
+
+// Tabs
+.el-tabs__item {
+  font-weight: $fw-medium;
+
+  &.is-active {
+    color: $primary;
+    font-weight: $fw-semibold;
+  }
+}
+
+.el-tabs__active-bar {
+  background: $primary;
+  height: 3px;
+  border-radius: $radius-pill;
+}
+
+// 表格
+.el-table {
+  border-radius: $radius-lg;
+  overflow: hidden;
+
+  th.el-table__cell {
+    background: $bg-soft;
+    color: $text-primary;
+    font-weight: $fw-semibold;
+  }
+}
+
+// 空状态
+.el-empty__description {
+  color: $text-secondary;
 }

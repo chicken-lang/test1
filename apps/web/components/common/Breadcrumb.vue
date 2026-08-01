@@ -1,6 +1,8 @@
 <script setup lang="ts">
-// Breadcrumb: 面包屑导航(首页 > 栏目 > 子栏目)
-// 接收 items 数组,最后一项为当前页(不可点击)
+// Breadcrumb v3.0: 面包屑导航(首页 > 栏目 > 子栏目)
+// 应用 v3.0 设计令牌:当前页 VI 主色 + icons 字典
+import { icons } from '~/utils/icons'
+
 interface BreadcrumbItem {
   title: string
   to?: string
@@ -16,11 +18,17 @@ defineProps<{
     <ol class="breadcrumb-list">
       <li v-for="(item, idx) in items" :key="idx" class="breadcrumb-item">
         <NuxtLink v-if="item.to && idx < items.length - 1" :to="item.to" class="breadcrumb-link">
-          <Icon v-if="idx === 0" icon="mdi:home" />
-          {{ item.title }}
+          <Icon v-if="idx === 0" :icon="icons.home" :width="14" :height="14" />
+          <span>{{ item.title }}</span>
         </NuxtLink>
         <span v-else class="breadcrumb-current" aria-current="page">{{ item.title }}</span>
-        <Icon v-if="idx < items.length - 1" icon="mdi:chevron-right" class="breadcrumb-sep" />
+        <Icon
+          v-if="idx < items.length - 1"
+          :icon="icons.chevronRight"
+          :width="12"
+          :height="12"
+          class="breadcrumb-sep"
+        />
       </li>
     </ol>
   </nav>
@@ -28,8 +36,8 @@ defineProps<{
 
 <style lang="scss" scoped>
 .breadcrumb {
-  padding: 12px 0;
-  font-size: 13px;
+  padding: $space-3 0;
+  font-size: $fs-sm;
   color: $text-secondary;
 }
 
@@ -37,7 +45,7 @@ defineProps<{
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: $space-1;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -46,34 +54,28 @@ defineProps<{
 .breadcrumb-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: $space-1;
 }
 
 .breadcrumb-link {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   color: $text-secondary;
+  transition: color $transition-fast;
 
   &:hover {
     color: $primary;
   }
 }
 
+// 当前页:VI 主色加粗(品牌化)
 .breadcrumb-current {
-  color: $text-primary;
-  font-weight: 500;
+  color: $primary-dark;
+  font-weight: $fw-semibold;
 }
 
 .breadcrumb-sep {
-  font-size: 14px;
   color: $text-placeholder;
-}
-
-// 适老化
-:global([data-color-mode='elderly']) {
-  .breadcrumb {
-    font-size: 15px;
-  }
 }
 </style>

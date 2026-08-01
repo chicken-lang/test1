@@ -1,14 +1,13 @@
 <script setup lang="ts">
-// ListFilter: 列表筛选区(年度/月份/标签)
-// 通过 v-model:year / v-model:month / v-model:tag 双向绑定筛选条件
-// 所有筛选变化触发 change 事件,父组件重置页码并重新查询
+// ListFilter v3.0: 列表筛选区(年度/月份/标签)
+// 应用 v3.0 设计令牌:VI 主色 active 渐变 + icons 字典 + 焦点态
+import { icons } from '~/utils/icons'
+
 const props = defineProps<{
   year: number | undefined
   month: number | undefined
   tag: string | undefined
-  // 可选年度列表
   years: number[]
-  // 可选标签列表
   tags: string[]
 }>()
 
@@ -41,8 +40,12 @@ const onReset = () => {
 
 <template>
   <div class="list-filter">
+    <!-- 年度 -->
     <div class="filter-row">
-      <span class="filter-label">年度</span>
+      <span class="filter-label">
+        <Icon :icon="icons.calendar" :width="14" :height="14" />
+        年度
+      </span>
       <div class="filter-options">
         <button
           type="button"
@@ -65,8 +68,12 @@ const onReset = () => {
       </div>
     </div>
 
+    <!-- 月份 -->
     <div class="filter-row">
-      <span class="filter-label">月份</span>
+      <span class="filter-label">
+        <Icon :icon="icons.clock" :width="14" :height="14" />
+        月份
+      </span>
       <div class="filter-options">
         <button
           type="button"
@@ -89,8 +96,12 @@ const onReset = () => {
       </div>
     </div>
 
+    <!-- 标签 -->
     <div class="filter-row">
-      <span class="filter-label">标签</span>
+      <span class="filter-label">
+        <Icon :icon="icons.bookmark" :width="14" :height="14" />
+        标签
+      </span>
       <div class="filter-options">
         <button
           type="button"
@@ -113,29 +124,31 @@ const onReset = () => {
       </div>
     </div>
 
+    <!-- 重置 -->
     <div class="filter-action">
-      <el-button type="primary" plain size="small" @click="onReset">
-        <Icon icon="mdi:refresh" />
+      <button type="button" class="reset-btn" @click="onReset">
+        <Icon :icon="icons.refresh" :width="14" :height="14" />
         重置筛选
-      </el-button>
+      </button>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
 .list-filter {
-  background: #fff;
+  background: $bg-card;
   border: 1px solid $border-lighter;
-  border-radius: $radius-base;
-  padding: 16px 20px;
-  margin-bottom: 16px;
+  border-radius: $radius-lg;
+  padding: $space-4 $space-5;
+  margin-bottom: $space-4;
+  box-shadow: $shadow-xs;
 }
 
 .filter-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 6px 0;
+  gap: $space-3;
+  padding: $space-2 0;
   border-bottom: 1px dashed $border-lighter;
 
   &:last-of-type {
@@ -145,58 +158,78 @@ const onReset = () => {
 
 .filter-label {
   flex-shrink: 0;
-  width: 40px;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  width: 56px;
+  font-size: $fs-sm;
   color: $text-secondary;
-  line-height: 28px;
+  line-height: 30px;
 }
 
 .filter-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: $space-2;
 }
 
 .filter-btn {
-  height: 28px;
-  padding: 0 12px;
-  font-size: 13px;
+  height: 30px;
+  padding: 0 $space-3;
+  font-size: $fs-sm;
   color: $text-regular;
   background: $bg-page;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: $radius-pill;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all $transition-fast;
 
   &:hover {
     color: $primary;
     background: $primary-bg;
+    border-color: $primary-bg-soft;
   }
 
   &.active {
     color: #fff;
     background: $primary;
+    box-shadow: $shadow-primary;
   }
 }
 
 .filter-action {
   display: flex;
   justify-content: flex-end;
-  margin-top: 8px;
+  margin-top: $space-3;
+  padding-top: $space-3;
+  border-top: 1px solid $border-lighter;
+}
+
+.reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  height: 32px;
+  padding: 0 $space-4;
+  font-size: $fs-sm;
+  color: $text-secondary;
+  background: $bg-card;
+  border: 1px solid $border-base;
+  border-radius: $radius-base;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    color: $primary;
+    border-color: $primary;
+    background: $primary-bg;
+  }
 }
 
 // 移动端: 标签宽度自适应
 @include respond-to(xs) {
   .filter-label {
     width: auto;
-  }
-}
-
-// 适老化
-:global([data-color-mode='elderly']) {
-  .filter-btn {
-    height: 32px;
-    font-size: 14px;
   }
 }
 </style>

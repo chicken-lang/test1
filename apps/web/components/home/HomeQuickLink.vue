@@ -1,42 +1,53 @@
 <template>
-  <section class="home-quick">
+  <section
+    v-reveal
+    class="home-quick reveal"
+    aria-labelledby="quick-title"
+  >
     <!-- 区块标题(中英文对照) -->
     <div class="section-header">
       <div class="section-title-group">
-        <span class="title-cn">快速通道</span>
+        <span id="quick-title" class="title-cn">快速通道</span>
         <span class="title-en">Quick Access</span>
       </div>
     </div>
 
-    <div class="quick-grid">
-      <a
-        v-for="link in quickLinks"
-        :key="link.id"
-        :href="link.url"
-        class="quick-card"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <!-- 顶部金色装饰条 -->
-        <span class="card-top"></span>
-        <div class="card-body">
-          <div class="card-icon">
-            <Icon :icon="link.icon" width="22" height="22" />
+    <ul class="quick-grid" role="list">
+      <li v-for="link in quickLinks" :key="link.id" class="quick-item">
+        <NuxtLink
+          :to="link.url"
+          class="quick-card"
+          :target="link.target || '_self'"
+          :rel="link.target === '_blank' ? 'noopener noreferrer' : undefined"
+          :aria-label="`${link.title} - ${link.category}${link.target === '_blank' ? '(新窗口打开)' : ''}`"
+        >
+          <!-- 顶部 VI 主色装饰条 -->
+          <span class="card-top" aria-hidden="true"></span>
+          <div class="card-body">
+            <div class="card-icon">
+              <Icon :icon="link.icon" :width="22" :height="22" />
+            </div>
+            <div class="card-text">
+              <span class="card-title">{{ link.title }}</span>
+              <span class="card-category">{{ link.category }}</span>
+            </div>
+            <Icon :icon="icons.arrowRight" class="card-arrow" :width="14" :height="14" />
           </div>
-          <div class="card-text">
-            <span class="card-title">{{ link.title }}</span>
-            <span class="card-category">{{ link.category }}</span>
-          </div>
-          <Icon icon="mdi:arrow-top-right" class="card-arrow" width="14" height="14" />
-        </div>
-      </a>
-    </div>
+        </NuxtLink>
+      </li>
+    </ul>
   </section>
 </template>
 
 <script setup lang="ts">
-// HomeQuickLink v2.0: 卡片化设计(去圆形图标,采用顶边装饰+方形图标+类别副标)
-import { quickLinks } from '~/mock/data'
+// HomeQuickLink v3.0: sm/md 断点适配 + ARIA + icons 字典 + v-reveal 入场
+// 注:link.icon 为数据驱动的图标字符串(Iconify 原生支持),保留数据灵活性
+// 数据源: useApi → /api/quick-links（SSR 预取）
+import { icons } from '~/utils/icons'
+
+const api = useApi()
+const { data: quickLinkData } = await useAsyncData('home-quick-links', () => api.get<any[]>('/quick-links'))
+const quickLinks = computed(() => quickLinkData.value ?? [])
 </script>
 
 <style lang="scss" scoped>
@@ -48,6 +59,13 @@ import { quickLinks } from '~/mock/data'
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: $space-4;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.quick-item {
+  list-style: none;
 }
 
 .quick-card {
@@ -58,6 +76,7 @@ import { quickLinks } from '~/mock/data'
   overflow: hidden;
   box-shadow: $shadow-xs;
   transition: all $transition-base;
+  height: 100%;
 
   // 顶部装饰条(默认透明)
   .card-top {
@@ -68,17 +87,17 @@ import { quickLinks } from '~/mock/data'
   }
 
   &:hover {
-    box-shadow: $shadow-md;
-    transform: translateY(-3px);
+    box-shadow: $shadow-sm;
 
     .card-top {
-      background: $grad-gold;
+      background: $primary;
     }
 
     .card-icon {
-      background: $grad-primary;
+      background: $primary;
       color: #fff;
-      box-shadow: 0 4px 12px rgba(0, 91, 172, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 115, 189, 0.3); // VI 主色阴影
+      transform: scale(1.05);
     }
 
     .card-title {
@@ -88,8 +107,13 @@ import { quickLinks } from '~/mock/data'
     .card-arrow {
       opacity: 1;
       transform: translate(0, 0);
-      color: $gold;
+      color: $primary;
     }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 2px;
   }
 }
 
@@ -148,7 +172,22 @@ import { quickLinks } from '~/mock/data'
   transition: all $transition-base;
 }
 
-// 移动端
+// 中屏(md):4 列
+@include respond-to(md) {
+  .quick-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+// 平板(sm):4 列
+@include respond-to(sm) {
+  .quick-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: $space-3;
+  }
+}
+
+// 移动端:3 列
 @include respond-to(xs) {
   .quick-grid {
     grid-template-columns: repeat(3, 1fr);

@@ -7,7 +7,7 @@ name: jwc-dev
 services:
   # ---------- PostgreSQL 16 主库 ----------
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16
     container_name: jwc-postgres
     restart: unless-stopped
     ports:

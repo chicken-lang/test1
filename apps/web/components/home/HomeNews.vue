@@ -1,25 +1,41 @@
 <template>
-  <section class="home-news">
+  <section
+    v-reveal
+    class="home-news reveal"
+    aria-labelledby="news-title"
+  >
     <!-- 区块标题(中英文对照) -->
     <div class="section-header">
       <div class="section-title-group">
-        <span class="title-cn">新闻资讯</span>
+        <span id="news-title" class="title-cn">教务动态</span>
         <span class="title-en">News</span>
       </div>
-      <NuxtLink to="/news" class="section-more">
+      <NuxtLink to="/list/news" class="section-more" aria-label="查看更多教务动态">
         更多
-        <Icon icon="mdi:arrow-right" width="14" height="14" />
+        <Icon :icon="icons.arrowRight" :width="14" :height="14" />
       </NuxtLink>
     </div>
 
-    <div class="news-grid">
+    <!-- 防御性数据:有内容时展示,空数据时显示 EmptyState -->
+    <div v-if="hasNews" class="news-grid">
       <!-- 左侧:特色大图新闻 -->
-      <NuxtLink :to="`/article/${featured.id}`" class="news-feature">
+      <NuxtLink
+        v-if="featured"
+        :to="`/article/${featured.id}`"
+        class="news-feature"
+        :aria-label="`头条新闻:${featured.title}`"
+      >
         <div class="feature-media">
-          <img :src="featured.imageUrl" :alt="featured.title" class="feature-img" />
+          <img
+            :src="featured.imageUrl"
+            :alt="featured.title"
+            class="feature-img"
+            loading="lazy"
+            decoding="async"
+          />
           <div class="feature-overlay"></div>
           <span class="feature-category">
-            <Icon icon="mdi:fire" width="12" height="12" />
+            <Icon :icon="icons.hot" :width="12" :height="12" />
             头条
           </span>
         </div>
@@ -28,11 +44,11 @@
           <p class="feature-summary">{{ featured.summary }}</p>
           <div class="feature-meta">
             <span class="meta-date">
-              <Icon icon="mdi:calendar-month-outline" width="13" height="13" />
+              <Icon :icon="icons.calendar" :width="13" :height="13" />
               {{ featured.publishDate }}
             </span>
             <span class="meta-views">
-              <Icon icon="mdi:eye-outline" width="13" height="13" />
+              <Icon :icon="icons.eye" :width="13" :height="13" />
               {{ featured.views }} 阅读
             </span>
           </div>
@@ -40,12 +56,18 @@
       </NuxtLink>
 
       <!-- 右侧:次要新闻列表 -->
-      <ul class="news-side">
+      <ul v-if="rest.length" class="news-side">
         <li v-for="(item, idx) in rest" :key="item.id" class="side-item">
           <NuxtLink :to="`/article/${item.id}`" class="side-link">
             <span class="side-index">{{ String(idx + 1).padStart(2, '0') }}</span>
             <div class="side-media">
-              <img :src="item.imageUrl" :alt="item.title" class="side-img" />
+              <img
+                :src="item.imageUrl"
+                :alt="item.title"
+                class="side-img"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
             <div class="side-body">
               <h4 class="side-title">{{ item.title }}</h4>
@@ -60,16 +82,36 @@
         </li>
       </ul>
     </div>
+
+    <!-- 空数据防御:显示 EmptyState -->
+    <div v-else class="news-empty">
+      <EmptyState
+        variant="empty"
+        title="暂无教务动态"
+        description="教务动态加载中,请稍后访问"
+      />
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-// HomeNews v2.0: 杂志式布局(1 大特色 + 3 次要),参考商业门户排版
-import { newsList } from '~/mock/data'
+// HomeNews v4.0: 防御性数据 + icons 字典 + v-reveal 入场 + EmptyState 兜底
+// 对齐需求文档:教务动态栏目(/list/news)
+// 数据源: useApi → /api/list/news（SSR 预取前 4 条，1 头条 + 3 侧栏）
+import { icons } from '~/utils/icons'
 
+// 教务动态数据（取前 4 条：1 头条 + 3 侧栏，computed 兜底防 null）
+const api = useApi()
+const { data: newsData } = await useAsyncData('home-news', () =>
+  api.get<{ list: any[] }>('/list/news?page_size=4'),
+)
+const newsList = computed(() => newsData.value?.list ?? [])
+
+// 防御性数据:接口可能返回空数组,需兜底处理
+const hasNews = computed(() => newsList.value.length > 0)
 // 取第一条作为头条,其余作为侧栏
-const featured = computed(() => newsList[0])
-const rest = computed(() => newsList.slice(1, 4))
+const featured = computed(() => newsList.value[0])
+const rest = computed(() => newsList.value.slice(1, 4))
 </script>
 
 <style lang="scss" scoped>
@@ -94,8 +136,7 @@ const rest = computed(() => newsList.slice(1, 4))
   transition: all $transition-base;
 
   &:hover {
-    box-shadow: $shadow-lg;
-    transform: translateY(-2px);
+    box-shadow: $shadow-sm;
 
     .feature-img {
       transform: scale(1.06);
@@ -104,6 +145,11 @@ const rest = computed(() => newsList.slice(1, 4))
     .feature-title {
       color: $primary;
     }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 2px;
   }
 }
 
@@ -124,7 +170,9 @@ const rest = computed(() => newsList.slice(1, 4))
 .feature-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 50%, rgba(0, 42, 82, 0.55) 100%);
+  // 豁免说明:Banner/特色图片遮罩为功能性渐变(用于文字可读性)
+  // 色值已对齐 VI 主色系($primary-dark #005a8e 的 rgba 形式)
+  background: linear-gradient(180deg, transparent 50%, rgba(0, 90, 142, 0.55) 100%);
 }
 
 .feature-category {
@@ -135,13 +183,13 @@ const rest = computed(() => newsList.slice(1, 4))
   align-items: center;
   gap: $space-1;
   padding: $space-1 $space-3;
-  background: $grad-gold;
+  background: $primary;
   border-radius: $radius-pill;
   font-size: $fs-xs;
   font-weight: $fw-semibold;
   color: #fff;
   letter-spacing: 1px;
-  box-shadow: 0 2px 8px rgba(184, 149, 106, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 115, 189, 0.4); // VI 主色阴影
 
   :deep(svg) {
     color: #fff;
@@ -186,7 +234,7 @@ const rest = computed(() => newsList.slice(1, 4))
   }
 
   :deep(svg) {
-    color: $gold;
+    color: $primary;
   }
 }
 
@@ -206,7 +254,7 @@ const rest = computed(() => newsList.slice(1, 4))
   transition: all $transition-base;
 
   &:hover {
-    box-shadow: $shadow-md;
+    box-shadow: $shadow-sm;
     transform: translateX(2px);
 
     .side-img {
@@ -218,7 +266,7 @@ const rest = computed(() => newsList.slice(1, 4))
     }
 
     .side-index {
-      color: $gold;
+      color: $primary;
     }
   }
 }
@@ -227,6 +275,11 @@ const rest = computed(() => newsList.slice(1, 4))
   display: flex;
   align-items: stretch;
   height: 100%;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 2px;
+  }
 }
 
 .side-index {
@@ -293,6 +346,13 @@ const rest = computed(() => newsList.slice(1, 4))
   .dot {
     color: $border-base;
   }
+}
+
+// 空状态
+.news-empty {
+  background: $bg-card;
+  border-radius: $radius-lg;
+  border: 1px solid $border-lighter;
 }
 
 // 移动端

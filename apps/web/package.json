@@ -13,22 +13,37 @@
     "lint": "eslint . --ext .vue,.ts,.js",
     "lint:fix": "eslint . --ext .vue,.ts,.js --fix",
     "typecheck": "nuxt typecheck",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "clean": "rimraf .nuxt .output dist"
   },
   "dependencies": {
-    "@jwc/shared": "workspace:*",
+    "@element-plus/icons-vue": "^2.3.1",
+    "@iconify-json/mdi": "^1.2.3",
     "@iconify/vue": "^4.3.0",
+    "@jwc/shared": "workspace:*",
+    "@nuxt/image": "^2.0.0",
+    "@vueuse/core": "^14.3.0",
+    "dayjs": "^1.11.13",
     "element-plus": "^2.8.8",
+    "jsencrypt": "^3.5.4",
     "pinia": "^2.2.6"
   },
   "devDependencies": {
     "@element-plus/nuxt": "^1.1.1",
     "@nuxtjs/color-mode": "^3.5.2",
     "@pinia/nuxt": "^0.5.5",
+    "@playwright/test": "^1.48.0",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "jsdom": "^25.0.1",
     "nuxt": "^3.14.1592",
     "rimraf": "^6.0.1",
     "sass": "^1.81.0",
+    "vitest": "^2.1.8",
     "vue": "^3.5.13",
-    "vue-router": "^4.4.5"
+    "vue-router": "^4.4.5",
+    "vue-tsc": "^3.3.8"
   }
 }

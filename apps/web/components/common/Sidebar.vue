@@ -1,9 +1,28 @@
 <script setup lang="ts">
-// Sidebar: 列表页侧边栏(栏目导航 + 热门 + 推荐)
-// props.columns: 同级栏目导航(高亮当前)
-// props.currentSlug: 当前栏目 slug
-// props.hot/recommend: 热门/推荐文章列表
-import type { ColumnCategory, SideItem } from '~/mock/data'
+// Sidebar v3.0: 列表页侧边栏(栏目导航 + 热门 + 推荐)
+// 应用 v3.0 设计令牌:去蓝底标题改用 VI 主色装饰 + card-hover + icons 字典
+// 数据通过 props 注入(由父级 list/[slug].vue 通过 useApi 获取后传入)
+import { icons } from '~/utils/icons'
+
+// 栏目配置类型(与 /api/columns 响应字段对齐)
+interface ColumnCategory {
+  slug: string
+  title: string
+  parentId: string | null
+  listStyle: 'card' | 'table' | 'compact' | 'gallery'
+  order: number
+  articleCount: number
+  icon?: string
+}
+
+// 侧边栏热门/推荐项(轻量,与 /api/hot-articles|recommend-articles 响应对齐)
+interface SideItem {
+  id: number
+  title: string
+  publishDate: string
+  views: number
+  url: string
+}
 
 defineProps<{
   columns: ColumnCategory[]
@@ -18,7 +37,8 @@ defineProps<{
     <!-- 栏目导航 -->
     <section class="sidebar-block">
       <h3 class="sidebar-title">
-        <Icon icon="mdi:folder-outline" />
+        <span class="title-bar" aria-hidden="true" />
+        <Icon :icon="icons.archive" :width="16" :height="16" />
         栏目导航
       </h3>
       <ul class="sidebar-nav">
@@ -28,8 +48,8 @@ defineProps<{
             class="sidebar-nav-link"
             :class="{ active: col.slug === currentSlug }"
           >
-            <Icon icon="mdi:chevron-right" />
-            {{ col.title }}
+            <Icon :icon="icons.chevronRight" :width="14" :height="14" class="nav-arrow" />
+            <span>{{ col.title }}</span>
           </NuxtLink>
         </li>
       </ul>
@@ -38,7 +58,8 @@ defineProps<{
     <!-- 热门文章 -->
     <section class="sidebar-block">
       <h3 class="sidebar-title">
-        <Icon icon="mdi:fire" />
+        <span class="title-bar" aria-hidden="true" />
+        <Icon :icon="icons.hot" :width="16" :height="16" />
         热门文章
       </h3>
       <ol class="sidebar-rank">
@@ -54,13 +75,14 @@ defineProps<{
     <!-- 推荐文章 -->
     <section class="sidebar-block">
       <h3 class="sidebar-title">
-        <Icon icon="mdi:star-outline" />
+        <span class="title-bar" aria-hidden="true" />
+        <Icon :icon="icons.star" :width="16" :height="16" />
         推荐文章
       </h3>
       <ul class="sidebar-list">
         <li v-for="item in recommend" :key="item.id">
           <NuxtLink :to="item.url" class="rec-link">
-            <Icon icon="mdi:arrow-right-bold" />
+            <Icon :icon="icons.arrowRight" :width="14" :height="14" class="rec-arrow" />
             <span>{{ item.title }}</span>
           </NuxtLink>
         </li>
@@ -73,69 +95,89 @@ defineProps<{
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: $space-4;
 }
 
 .sidebar-block {
-  background: #fff;
+  background: $bg-card;
   border: 1px solid $border-lighter;
-  border-radius: $radius-base;
+  border-radius: $radius-lg;
   overflow: hidden;
+  box-shadow: $shadow-xs;
 }
 
+// 标题:VI 主色装饰条 + 图标(去蓝底)
 .sidebar-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: $space-2;
   margin: 0;
-  padding: 12px 16px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
+  padding: $space-3 $space-4;
+  font-size: $fs-md;
+  font-weight: $fw-semibold;
+  color: $text-primary;
+  background: $bg-soft;
+  border-bottom: 1px solid $border-lighter;
+}
+
+.title-bar {
+  width: 3px;
+  height: 16px;
   background: $primary;
+  border-radius: $radius-pill;
 }
 
 .sidebar-nav {
   list-style: none;
   margin: 0;
-  padding: 8px 0;
+  padding: $space-2 0;
 }
 
 .sidebar-nav-link {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  font-size: 14px;
+  gap: $space-1;
+  padding: $space-2 $space-4;
+  font-size: $fs-base;
   color: $text-regular;
-  transition: all 0.2s;
+  transition: all $transition-fast;
+  border-left: 3px solid transparent;
 
-  :deep(svg) {
-    font-size: 12px;
-    opacity: 0.6;
+  .nav-arrow {
+    opacity: 0;
+    color: $primary;
+    transition: opacity $transition-fast;
   }
 
   &:hover {
     background: $primary-bg;
     color: $primary;
+
+    .nav-arrow {
+      opacity: 1;
+    }
   }
 
   &.active {
     background: $primary-bg;
-    color: $primary;
-    font-weight: 600;
-    border-left: 3px solid $primary;
+    color: $primary-dark;
+    font-weight: $fw-semibold;
+    border-left-color: $primary;
+
+    .nav-arrow {
+      opacity: 1;
+      color: $primary;
+    }
   }
 }
 
 .sidebar-rank {
   list-style: none;
   margin: 0;
-  padding: 8px 16px;
-  counter-reset: none;
+  padding: $space-2 $space-4;
 
   li {
-    padding: 6px 0;
+    padding: $space-2 0;
     border-bottom: 1px dashed $border-lighter;
 
     &:last-child {
@@ -147,10 +189,10 @@ defineProps<{
 .rank-link {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
+  gap: $space-2;
+  font-size: $fs-sm;
   color: $text-regular;
-  line-height: 1.5;
+  line-height: $lh-snug;
 
   &:hover .rank-text {
     color: $primary;
@@ -159,19 +201,20 @@ defineProps<{
 
 .rank-num {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  line-height: 18px;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
   text-align: center;
-  font-size: 11px;
-  font-weight: 700;
+  font-family: $font-serif;
+  font-size: $fs-xs;
+  font-weight: $fw-bold;
   color: $text-secondary;
   background: $bg-page;
-  border-radius: 50%;
+  border-radius: $radius-pill;
 
   &.top {
     color: #fff;
-    background: $danger;
+    background: $primary;
   }
 }
 
@@ -182,19 +225,19 @@ defineProps<{
 .sidebar-list {
   list-style: none;
   margin: 0;
-  padding: 8px 0;
+  padding: $space-2 0;
 }
 
 .rec-link {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
-  padding: 6px 16px;
-  font-size: 13px;
+  gap: $space-1;
+  padding: $space-2 $space-4;
+  font-size: $fs-sm;
   color: $text-regular;
-  line-height: 1.5;
+  line-height: $lh-snug;
 
-  :deep(svg) {
+  .rec-arrow {
     flex-shrink: 0;
     color: $primary;
     margin-top: 2px;
@@ -205,21 +248,8 @@ defineProps<{
   }
 
   &:hover {
-    background: $bg-hover;
+    background: $bg-soft;
     color: $primary;
-  }
-}
-
-// 适老化
-:global([data-color-mode='elderly']) {
-  .sidebar-title {
-    font-size: 16px;
-  }
-
-  .sidebar-nav-link,
-  .rank-link,
-  .rec-link {
-    font-size: 15px;
   }
 }
 </style>

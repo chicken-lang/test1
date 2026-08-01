@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "jsx": "preserve",
+    "importHelpers": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@jwc/shared": ["packages/shared/src/index.ts"],
+      "@jwc/shared/*": ["packages/shared/src/*"]
+    },
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "apps/web/**/*.ts",
+    "apps/web/**/*.vue",
+    "packages/shared/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "apps/web/node_modules",
+    "apps/web/.nuxt",
+    "apps/web/.output",
+    "apps/web/dist",
+    "apps/server/node_modules",
+    "apps/server/dist",
+    "packages/shared/node_modules",
+    "packages/shared/dist"
+  ]
+}

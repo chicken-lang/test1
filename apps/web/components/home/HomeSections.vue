@@ -1,300 +1,274 @@
 <template>
-  <section class="home-sections">
-    <div class="sections-grid">
-      <!-- 课程建设分区(FR-01.06):数字统计卡片 -->
-      <div class="info-block block-stats">
-        <div class="block-header">
-          <div class="header-text">
-            <h3 class="block-title">课程建设</h3>
-            <span class="block-subtitle">Course Construction</span>
-          </div>
-          <NuxtLink to="/research" class="block-more">
-            更多
-            <Icon icon="mdi:arrow-right" width="13" height="13" />
-          </NuxtLink>
-        </div>
-        <div class="stats-grid">
-          <NuxtLink
-            v-for="item in courseConstruction"
-            :key="item.title"
-            :to="item.url"
-            class="stat-item"
-          >
-            <span class="stat-count" :style="{ color: item.color }">{{ item.count }}</span>
-            <span class="stat-label">{{ item.title }}</span>
-          </NuxtLink>
-        </div>
-      </div>
+  <section
+    v-reveal
+    class="home-sections reveal"
+    aria-labelledby="sections-title"
+  >
+    <h2 id="sections-title" class="sr-only">业务板块</h2>
 
-      <!-- 常用信息(FR-01.07) -->
-      <div class="info-block">
-        <div class="block-header">
-          <div class="header-text">
-            <h3 class="block-title">常用信息</h3>
-            <span class="block-subtitle">Common Info</span>
-          </div>
-        </div>
-        <ul class="info-list">
-          <li v-for="item in commonInfo" :key="item.title">
-            <NuxtLink :to="item.url" class="info-link">
-              <span class="info-icon">
-                <Icon :icon="item.icon" width="18" height="18" />
+    <!-- Tab 切换头(通知公告/教务动态/一流育人体系/办事指南) -->
+    <div class="sections-header" role="tablist" aria-label="业务板块切换">
+      <button
+        v-for="tab in tabs"
+        :id="`section-tab-${tab.key}`"
+        :key="tab.key"
+        type="button"
+        class="section-tab"
+        :class="{ active: activeTab === tab.key }"
+        role="tab"
+        :aria-selected="activeTab === tab.key ? 'true' : 'false'"
+        @click="activeTab = tab.key"
+      >
+        <Icon :icon="tab.icon" :width="18" :height="18" />
+        <span>{{ tab.label }}</span>
+      </button>
+    </div>
+
+    <!-- 内容区:当前栏目最新文章列表 -->
+    <div class="sections-body">
+      <Transition name="tab-fade" mode="out-in">
+        <ul :key="activeTab" class="section-list">
+          <li v-for="item in currentList" :key="item.id" class="section-item">
+            <NuxtLink :to="`/article/${item.id}`" class="section-link">
+              <span class="item-date">
+                <span class="date-day">{{ item.publishDate.slice(8) }}</span>
+                <span class="date-month">{{ item.publishDate.slice(0, 7) }}</span>
               </span>
-              <span class="info-text">{{ item.title }}</span>
-              <Icon icon="mdi:chevron-right" class="info-arrow" width="14" height="14" />
+              <div class="item-main">
+                <h4 class="item-title">{{ item.title }}</h4>
+                <p class="item-summary">{{ item.summary }}</p>
+              </div>
+              <Icon :icon="icons.chevronRight" class="item-arrow" :width="18" :height="18" />
             </NuxtLink>
           </li>
         </ul>
+      </Transition>
+
+      <!-- 空状态 -->
+      <div v-if="!currentList.length" class="section-empty">
+        <EmptyState
+          variant="empty"
+          :title="`暂无${currentTabLabel}内容`"
+          description="内容加载中,请稍后访问"
+        />
       </div>
 
-      <!-- 投诉举报(FR-01.08):暗色卡片强调 -->
-      <div class="info-block block-report">
-        <div class="block-header">
-          <div class="header-text">
-            <h3 class="block-title">投诉举报</h3>
-            <span class="block-subtitle">Feedback & Report</span>
-          </div>
-        </div>
-        <ul class="report-list">
-          <li v-for="item in reportInfo" :key="item.label">
-            <span class="report-label">{{ item.label }}</span>
-            <span class="report-value">{{ item.value }}</span>
-          </li>
-        </ul>
-        <NuxtLink to="/feedback" class="report-btn">
-          <Icon icon="mdi:email-edit-outline" width="16" height="16" />
-          <span>在线反馈</span>
+      <!-- 查看更多 -->
+      <div class="sections-footer">
+        <NuxtLink :to="`/list/${activeTab}`" class="section-more">
+          查看更多{{ currentTabLabel }}内容
+          <Icon :icon="icons.arrowRight" :width="14" :height="14" />
         </NuxtLink>
-      </div>
-
-      <!-- 信息公开(FR-01.09) -->
-      <div class="info-block">
-        <div class="block-header">
-          <div class="header-text">
-            <h3 class="block-title">信息公开</h3>
-            <span class="block-subtitle">Disclosure</span>
-          </div>
-        </div>
-        <ul class="info-list">
-          <li v-for="item in disclosureLinks" :key="item.title">
-            <NuxtLink :to="item.url" class="info-link">
-              <span class="info-icon info-icon-doc">
-                <Icon icon="mdi:file-document-outline" width="18" height="18" />
-              </span>
-              <span class="info-text">{{ item.title }}</span>
-              <Icon icon="mdi:chevron-right" class="info-arrow" width="14" height="14" />
-            </NuxtLink>
-          </li>
-        </ul>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-// HomeSections v2.0: 课程建设统计 + 常用信息 + 投诉举报(暗色强调)+ 信息公开
-// 对应 FR-01.06/07/08/09
-import { courseConstruction, commonInfo, reportInfo, disclosureLinks } from '~/mock/data'
+// HomeSections v5.0: D 区业务四栏切换（修订版）
+// 对齐修订版需求文档首页 D 区:通知公告/教务动态/一流育人体系/办事指南 四栏切换,展示各栏目最新内容
+// 数据源: useApi → /api/list/:slug（SSR 预取四个栏目各前 6 条）
+import { icons } from '~/utils/icons'
+
+const api = useApi()
+// 四个业务栏目并行预取(对齐修订版需求文档 D 区四栏)
+const { data: noticesData } = await useAsyncData('home-section-notices', () =>
+  api.get<{ list: any[] }>('/list/notices?page_size=6'),
+)
+const { data: newsData } = await useAsyncData('home-section-news', () =>
+  api.get<{ list: any[] }>('/list/news?page_size=6'),
+)
+const { data: firstClassData } = await useAsyncData('home-section-first-class', () =>
+  api.get<{ list: any[] }>('/list/first-class-education?page_size=6'),
+)
+const { data: guideData } = await useAsyncData('home-section-guide', () =>
+  api.get<{ list: any[] }>('/list/guide?page_size=6'),
+)
+
+const tabs = [
+  { key: 'notices' as const, label: '通知公告', icon: icons.notice },
+  { key: 'news' as const, label: '教务动态', icon: icons.news },
+  { key: 'first-class-education' as const, label: '一流育人体系', icon: icons.cap },
+  { key: 'guide' as const, label: '办事指南', icon: icons.guide },
+]
+
+const activeTab = ref<'notices' | 'news' | 'first-class-education' | 'guide'>('notices')
+
+const currentList = computed(() => {
+  const map = {
+    notices: noticesData.value?.list ?? [],
+    news: newsData.value?.list ?? [],
+    'first-class-education': firstClassData.value?.list ?? [],
+    guide: guideData.value?.list ?? [],
+  }
+  return map[activeTab.value]
+})
+
+const currentTabLabel = computed(() => tabs.find((t) => t.key === activeTab.value)?.label ?? '')
 </script>
 
 <style lang="scss" scoped>
-.sections-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-5;
+// 屏幕阅读器专用(视觉隐藏)
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.info-block {
+.home-sections {
   background: $bg-card;
   border-radius: $radius-lg;
   padding: $space-6;
   box-shadow: $shadow-sm;
-  transition: box-shadow $transition-base;
-
-  &:hover {
-    box-shadow: $shadow-md;
-  }
 }
 
-// 区块标题(中英文 + 金色装饰线)
-.block-header {
+// ========== Tab 切换头 ==========
+.sections-header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: $space-5;
-  padding-bottom: $space-3;
-  border-bottom: 1px solid $border-lighter;
-}
-
-.header-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  position: relative;
-  padding-left: $space-4;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 4px;
-    bottom: 4px;
-    width: 3px;
-    background: $grad-gold;
-    border-radius: $radius-pill;
-  }
-}
-
-.block-title {
-  font-size: $fs-lg;
-  font-weight: $fw-bold;
-  color: $text-primary;
-  line-height: 1.2;
-}
-
-.block-subtitle {
-  font-size: $fs-xs;
-  color: $text-placeholder;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-
-.block-more {
-  display: inline-flex;
-  align-items: center;
   gap: $space-1;
-  font-size: $fs-xs;
+  border-bottom: 1px solid $border-lighter;
+  margin-bottom: $space-5;
+}
+
+.section-tab {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3 $space-5;
+  font-size: $fs-md;
+  font-weight: $fw-medium;
   color: $text-secondary;
-  transition: color $transition-fast;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  transition: all $transition-fast;
+  position: relative;
+  margin-bottom: -1px;
+  cursor: pointer;
 
   &:hover {
     color: $primary;
   }
+
+  &.active {
+    color: $primary;
+    border-bottom-color: $primary;
+    font-weight: $fw-semibold;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: -2px;
+    border-radius: $radius-base;
+  }
 }
 
-// 课程建设统计
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $space-3;
+// ========== 内容列表 ==========
+.section-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-height: 300px;
 }
 
-.stat-item {
+.section-item {
+  border-bottom: 1px dashed $border-lighter;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.section-link {
+  display: flex;
+  align-items: center;
+  gap: $space-4;
+  padding: $space-3 $space-2;
+  border-radius: $radius-base;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $bg-soft;
+
+    .item-title {
+      color: $primary;
+    }
+
+    .item-arrow {
+      opacity: 1;
+      transform: translateX(0);
+      color: $primary;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 2px;
+  }
+}
+
+// 日期块
+.item-date {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: $space-5 $space-3;
-  background: $bg-soft;
-  border-radius: $radius-base;
-  transition: all $transition-base;
-  position: relative;
-  overflow: hidden;
-
-  // 底部装饰条
-  &::after {
-    content: '';
-    position: absolute;
-    left: 30%;
-    right: 30%;
-    bottom: 0;
-    height: 2px;
-    background: $grad-gold;
-    transform: scaleX(0);
-    transition: transform $transition-base;
-  }
-
-  &:hover {
-    background: $primary-bg;
-    transform: translateY(-2px);
-
-    &::after {
-      transform: scaleX(1);
-    }
-  }
-}
-
-.stat-count {
-  font-family: $font-serif;
-  font-size: $fs-4xl;
-  font-weight: $fw-bold;
-  line-height: 1;
-  margin-bottom: $space-2;
-}
-
-.stat-label {
-  font-size: $fs-sm;
-  color: $text-secondary;
-  font-weight: $fw-medium;
-}
-
-// 常用信息 / 信息公开列表
-.info-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $space-2;
-
-  li {
-    list-style: none;
-  }
-}
-
-.info-link {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  padding: $space-3;
-  border-radius: $radius-base;
-  color: $text-regular;
-  font-size: $fs-sm;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $gold-bg;
-
-    .info-icon {
-      background: $grad-gold;
-      color: #fff;
-    }
-
-    .info-text {
-      color: $primary;
-    }
-
-    .info-arrow {
-      opacity: 1;
-      transform: translateX(0);
-      color: $gold;
-    }
-  }
-}
-
-.info-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 56px;
   flex-shrink: 0;
-  border-radius: $radius-base;
+  padding: $space-2;
   background: $primary-bg;
-  color: $primary;
-  transition: all $transition-fast;
+  border-radius: $radius-base;
+  color: $primary-dark;
+
+  .date-day {
+    font-size: $fs-xl;
+    font-weight: $fw-bold;
+    line-height: 1;
+    font-family: $font-serif;
+  }
+
+  .date-month {
+    font-size: $fs-xs;
+    color: $text-secondary;
+    margin-top: 2px;
+  }
 }
 
-.info-icon-doc {
-  background: $gold-bg;
-  color: $gold-dark;
-}
-
-.info-text {
+.item-main {
   flex: 1;
   min-width: 0;
-  font-weight: $fw-medium;
-  transition: color $transition-fast;
 }
 
-.info-arrow {
+.item-title {
+  font-size: $fs-base;
+  font-weight: $fw-medium;
+  color: $text-primary;
+  margin: 0 0 $space-1;
+  transition: color $transition-fast;
+  // 单行省略
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-summary {
+  font-size: $fs-sm;
+  color: $text-secondary;
+  margin: 0;
+  // 两行省略
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.item-arrow {
   flex-shrink: 0;
   color: $text-placeholder;
   opacity: 0;
@@ -302,111 +276,83 @@ import { courseConstruction, commonInfo, reportInfo, disclosureLinks } from '~/m
   transition: all $transition-fast;
 }
 
-// 投诉举报(暗色卡片)
-.block-report {
-  background: $grad-dark;
-  position: relative;
-  overflow: hidden;
-
-  // 右上角装饰图案
-  &::before {
-    content: '';
-    position: absolute;
-    top: -40px;
-    right: -40px;
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(184, 149, 106, 0.18) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  .block-header {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .block-title {
-    color: #fff;
-  }
-
-  .block-subtitle {
-    color: rgba(255, 255, 255, 0.4);
-  }
+// 空状态
+.section-empty {
+  padding: $space-8 0;
 }
 
-.report-list {
-  margin-bottom: $space-5;
-
-  li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: $space-3 0;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    font-size: $fs-sm;
-
-    &:last-child {
-      border-bottom: none;
-    }
-  }
+// 底部"查看更多"
+.sections-footer {
+  margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid $border-lighter;
+  text-align: center;
 }
 
-.report-label {
-  color: rgba(255, 255, 255, 0.5);
+.section-more {
   display: inline-flex;
   align-items: center;
-
-  &::before {
-    content: '';
-    display: inline-block;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: $gold;
-    margin-right: $space-2;
-  }
-}
-
-.report-value {
-  color: $gold-light;
-  font-weight: $fw-medium;
-}
-
-.report-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-2;
-  width: 100%;
-  padding: $space-3;
-  background: $grad-gold;
-  border-radius: $radius-base;
-  font-size: $fs-base;
-  font-weight: $fw-semibold;
-  color: #fff;
-  transition: all $transition-base;
-  box-shadow: 0 4px 12px rgba(184, 149, 106, 0.3);
+  gap: $space-1;
+  padding: $space-2 $space-5;
+  font-size: $fs-sm;
+  color: $primary;
+  border: 1px solid $primary;
+  border-radius: $radius-pill;
+  transition: all $transition-fast;
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(184, 149, 106, 0.4);
+    background: $primary;
     color: #fff;
   }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 2px;
+  }
+}
+
+// Tab 切换过渡
+.tab-fade-enter-active,
+.tab-fade-leave-active {
+  transition: all 0.2s $ease-out-expo;
+}
+.tab-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.tab-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 // 移动端
 @include respond-to(xs) {
-  .sections-grid {
-    grid-template-columns: 1fr;
-    gap: $space-4;
-  }
-
-  .info-block {
+  .home-sections {
     padding: $space-5 $space-4;
   }
 
-  .info-list {
-    grid-template-columns: 1fr;
+  .sections-header {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    .section-tab {
+      padding: $space-2 $space-3;
+      font-size: $fs-sm;
+      white-space: nowrap;
+    }
+  }
+
+  .section-link {
+    gap: $space-2;
+  }
+
+  .item-date {
+    width: 44px;
+    padding: $space-1;
+
+    .date-day {
+      font-size: $fs-md;
+    }
   }
 }
 </style>

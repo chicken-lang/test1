@@ -61,6 +61,13 @@ docker/data/
 ERD.svg
 ERD.png
 
+# ========== Cloudflare Pages 冲突文件 ==========
+# Git 集成模式不需要 wrangler.toml，加了会覆盖 Dashboard 设置导致 build 失败
+wrangler.toml
+**/wrangler.toml
+# 与 Cloudflare Pages 自动部署冲突
+.github/workflows/
+
 # ========== Misc ==========
 .history/
 *.local

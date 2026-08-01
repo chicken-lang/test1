@@ -5,23 +5,7 @@
       <!-- 左侧:校徽 + 简介 -->
       <div class="footer-brand">
         <div class="footer-logo">
-          <svg viewBox="0 0 48 48" class="footer-emblem" aria-hidden="true">
-            <path
-              d="M24 4 L42 10 L42 26 Q42 38 24 44 Q6 38 6 26 L6 10 Z"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-            />
-            <path
-              d="M14 18 L24 22 L34 18 L34 32 L24 36 L14 32 Z"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linejoin="round"
-            />
-            <line x1="24" y1="22" x2="24" y2="36" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="24" cy="12" r="1.8" fill="currentColor" />
-          </svg>
+          <SchoolEmblem variant="horizontal" color="white" :size="44" class="footer-emblem" />
           <div class="footer-brand-text">
             <div class="footer-school">深圳信息职业技术大学</div>
             <div class="footer-dept">教务处 · Academic Affairs Office</div>
@@ -38,19 +22,19 @@
           <h3 class="footer-title">联系我们</h3>
           <ul class="footer-list">
             <li>
-              <Icon icon="mdi:map-marker-outline" width="15" height="15" />
+              <Icon :icon="icons.location" :width="15" :height="15" />
               <span>深圳市龙岗区龙翔大道2188号</span>
             </li>
             <li>
-              <Icon icon="mdi:phone-outline" width="15" height="15" />
+              <Icon :icon="icons.phone" :width="15" :height="15" />
               <span>0755-89226666</span>
             </li>
             <li>
-              <Icon icon="mdi:email-outline" width="15" height="15" />
+              <Icon :icon="icons.email" :width="15" :height="15" />
               <span>jwc@sziit.edu.cn</span>
             </li>
             <li>
-              <Icon icon="mdi:postage-stamp" width="15" height="15" />
+              <Icon :icon="icons.document" :width="15" :height="15" />
               <span>邮编:518172</span>
             </li>
           </ul>
@@ -78,7 +62,7 @@
           <h3 class="footer-title">关注我们</h3>
           <div class="qr-box">
             <div class="qr-img">
-              <Icon icon="mdi:qrcode" width="80" height="80" />
+              <Icon :icon="icons.image" :width="80" :height="80" />
             </div>
             <p class="qr-text">扫码关注教务处公众号</p>
           </div>
@@ -92,7 +76,14 @@
         <p class="copyright">
           © {{ new Date().getFullYear() }} 深圳信息职业技术大学教务处 ·
           <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">
-            粤ICP备12345678号
+            {{ icpNumber }}
+          </a>
+          <span class="footer-dot">·</span>
+          <a href="http://www.beian.gov.cn" target="_blank" rel="noopener noreferrer" class="gov-link">
+            <svg class="gov-badge" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <path fill="currentColor" d="M12 2L3 5v6c0 5.25 3.75 9.93 9 11 5.25-1.07 9-5.75 9-11V5l-9-3z"/>
+            </svg>
+            {{ policeRecord }}
           </a>
         </p>
         <div class="footer-extra">
@@ -106,7 +97,12 @@
 </template>
 
 <script setup lang="ts">
-// AppFooter v2.0: 品牌区 + 多列链接 + 二维码 + 版权底栏
+// AppFooter v3.0: SchoolEmblem 组件 + icons 字典
+import { icons } from '~/utils/icons'
+
+// ICP 备案号、公网安备号 - 从运行时配置读取,上线前通过环境变量设置真实备案号
+const { icpNumber, policeRecord } = useRuntimeConfig().public
+
 const friendLinks = [
   { name: '深圳信息职业技术大学', url: 'https://www.sziit.edu.cn' },
   { name: '广东省教育厅', url: 'https://edu.gd.gov.cn' },
@@ -115,16 +111,16 @@ const friendLinks = [
 ]
 
 const quickLinks = [
-  { title: '教务管理系统', url: '#' },
-  { title: '学生服务系统', url: '#' },
-  { title: '网络教学平台', url: '#' },
-  { title: '成绩查询系统', url: '#' },
+  { title: '通知公告', url: '/list/notices' },
+  { title: '办事指南', url: '/list/guide' },
+  { title: '规章制度', url: '/list/regulation-school' },
+  { title: '下载中心', url: '/list/download' },
 ]
 </script>
 
 <style lang="scss" scoped>
 .app-footer {
-  background: $grad-dark;
+  background: $primary-dark;
   color: rgba(255, 255, 255, 0.75);
   margin-top: $space-12;
 }
@@ -146,27 +142,26 @@ const quickLinks = [
   align-items: center;
   gap: $space-3;
   margin-bottom: $space-4;
+}
 
-  .footer-emblem {
-    width: 44px;
-    height: 44px;
-    color: $gold-light;
-    flex-shrink: 0;
-  }
+.footer-emblem {
+  flex-shrink: 0;
+  color: $primary-light;
+}
 
-  .footer-school {
-    font-size: $fs-md;
-    font-weight: $fw-semibold;
-    color: #fff;
-    letter-spacing: 1px;
-  }
+.footer-school {
+  font-family: $font-school-cn; // VI 手册第 7 页:中文校名标准字体(过渡方案:系统宋体)
+  font-size: $fs-md;
+  font-weight: $fw-semibold;
+  color: #fff;
+  letter-spacing: 1px;
+}
 
-  .footer-dept {
-    font-size: $fs-xs;
-    color: $gold-light;
-    margin-top: 2px;
-    letter-spacing: 0.5px;
-  }
+.footer-dept {
+  font-size: $fs-xs;
+  color: $primary-light;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
 }
 
 .footer-brief {
@@ -198,7 +193,7 @@ const quickLinks = [
       bottom: 0;
       width: 24px;
       height: 2px;
-      background: $grad-gold;
+      background: $primary;
       border-radius: $radius-pill;
     }
   }
@@ -214,7 +209,7 @@ const quickLinks = [
     color: rgba(255, 255, 255, 0.65);
 
     :deep(svg) {
-      color: $gold;
+      color: $primary;
       flex-shrink: 0;
     }
 
@@ -223,7 +218,7 @@ const quickLinks = [
       transition: all $transition-fast;
 
       &:hover {
-        color: $gold-light;
+        color: $primary-light;
         padding-left: $space-1;
       }
     }
@@ -250,7 +245,7 @@ const quickLinks = [
     align-items: center;
     justify-content: center;
     padding: $space-2;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: $shadow-sm;
 
     :deep(svg) {
       color: $primary-dark;
@@ -276,11 +271,43 @@ const quickLinks = [
   font-size: $fs-sm;
   color: rgba(255, 255, 255, 0.5);
 
+  .copyright {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    flex-wrap: wrap;
+
+    a {
+      color: rgba(255, 255, 255, 0.5);
+
+      &:hover {
+        color: $primary-light;
+      }
+    }
+
+    .footer-dot {
+      margin: 0 $space-1;
+      opacity: 0.5;
+    }
+
+    .gov-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .gov-badge {
+      width: 16px;
+      height: 16px;
+      vertical-align: middle;
+    }
+  }
+
   .copyright a {
     color: rgba(255, 255, 255, 0.5);
 
     &:hover {
-      color: $gold-light;
+      color: $primary-light;
     }
   }
 }
@@ -294,12 +321,20 @@ const quickLinks = [
     color: rgba(255, 255, 255, 0.5);
 
     &:hover {
-      color: $gold-light;
+      color: $primary-light;
     }
   }
 
   .dot {
     color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+// 平板: 链接区 2 列
+@include respond-to(sm) {
+  .footer-links {
+    grid-template-columns: 1fr 1fr;
+    gap: $space-6;
   }
 }
 
