@@ -65,6 +65,7 @@ interface MockAdmin {
 
 // 可变存储:运行期间的新增/编辑/删除/冻结/重置密码/角色变更/批量分配都会持久化到此数组
 const mockAdminsStore: MockAdmin[] = [
+  { id: 5, username: 'admin', password: sha256('admin123'), nickname: '系统管理员', role: 'system_admin', email: 'admin@sziit.edu.cn', phone: '', status: 'active', bind_column_ids: [], union_id: 'U20260000', created_at: '2026-03-15' },
   { id: 1, username: 'editor', password: sha256('123456'), nickname: '王编辑', role: 'editor', email: 'wang@sziit.edu.cn', phone: '13800138001', status: 'active', bind_column_ids: [2, 3], union_id: 'U20260001', created_at: '2026-03-15' },
   { id: 2, username: 'reviewer', password: sha256('123456'), nickname: '李审核', role: 'reviewer', email: 'li@sziit.edu.cn', phone: '13800138002', status: 'active', bind_column_ids: [1, 2, 3, 4], union_id: 'U20260002', created_at: '2026-03-15' },
   { id: 3, username: 'column_admin', password: sha256('123456'), nickname: '张栏目', role: 'column_admin', email: 'zhang@sziit.edu.cn', phone: '13800138003', status: 'active', bind_column_ids: [1, 2, 3, 4, 5, 6, 7, 8], union_id: 'U20260003', created_at: '2026-03-15' },
